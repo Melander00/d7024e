@@ -1,13 +1,25 @@
-FROM alpine:latest
+# --- Build Stage ---
+FROM golang:1.22.1 AS builder
 
-# Add the commands needed to put your compiled go binary in the container and
-# run it when the container starts.
-#
-# See https://docs.docker.com/engine/reference/builder/ for a reference of all
-# the commands you can use in this file.
-#
-# In order to use this file together with the docker-compose.yml file in the
-# same directory, you need to ensure the image you build gets the name
-# "kadlab", which you do by using the following command:
-#
-# $ docker build . -t kadlab
+WORKDIR /app
+
+COPY go.mod ./
+# COPY go.mod go.sum ./
+
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/kademlia-bin
+
+# --- Run Stage ---
+FROM alpine:3.24 AS app
+
+WORKDIR /app
+
+RUN addgroup -g 1001 -S go && \
+    adduser -S user -u 1001
+
+COPY --from=builder --chown=user:go /app/kademlia-bin /app/kademlia-bin
+
+CMD ["/app/kademlia-bin"]

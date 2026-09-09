@@ -1,0 +1,4 @@
+*.md
+*.pdf
+Dockerfile
+docker-compose.yml

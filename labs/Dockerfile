@@ -1,5 +1,5 @@
 # --- Build Stage ---
-FROM golang:1.22.1 AS builder
+FROM golang:1.27.0 AS builder
 
 WORKDIR /app
 
@@ -10,7 +10,7 @@ RUN go mod download
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/kademlia-bin
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/kademlia-bin /app/cmd/main.go
 
 # --- Run Stage ---
 FROM alpine:3.24 AS app

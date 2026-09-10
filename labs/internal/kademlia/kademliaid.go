@@ -1,8 +1,11 @@
 package kademlia
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
-	"math/rand"
+	"fmt"
+	"net"
 )
 
 // the static number of bytes in a KademliaID
@@ -11,25 +14,51 @@ const IDLength = 32 // 256 bit / 8 bits/byte = 32 bytes
 // type definition of a KademliaID
 type KademliaID [IDLength]byte
 
-// NewKademliaID returns a new instance of a KademliaID based on the string input
-func NewKademliaID(data string) *KademliaID {
-	decoded, _ := hex.DecodeString(data)
+// ParseKademliaID parses a hex-encoded string into a KademliaID.
+// It returns an error if the input is not valid hexadecimal, is not
+// exactly the expected length, or does not decode to exactly IDLength bytes.
+func ParseKademliaID(data string) (*KademliaID, error) {
+	const expectedHexLen = IDLength * 2 // 64 hex chars for a 32-byte ID
 
-	newKademliaID := KademliaID{}
-	for i := 0; i < IDLength; i++ {
-		newKademliaID[i] = decoded[i]
+	if len(data) != expectedHexLen {
+		return nil, fmt.Errorf(
+			"kademlia: invalid ID length: got %d hex characters, want %d",
+			len(data), expectedHexLen,
+		)
 	}
 
-	return &newKademliaID
+	decoded, err := hex.DecodeString(data)
+	if err != nil {
+		return nil, fmt.Errorf("kademlia: invalid hex string: %w", err)
+	}
+
+	newKademliaID := KademliaID{}
+	copy(newKademliaID[:], decoded)
+
+	return &newKademliaID, nil
 }
 
-// NewRandomKademliaID returns a new instance of a random KademliaID,
-// change this to a better version if you like
+func NewKademliaIDFromAddress(address string) (*KademliaID, error) {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, fmt.Errorf("kademlia: invalid node address %q: %w", address, err)
+	}
+
+	input := host + "|" + port
+	sum := sha256.Sum256([]byte(input))
+
+	id := KademliaID(sum)
+	return &id, nil
+}
+
+// NewRandomKademliaID returns a new instance of a cryptographically secure
+// random KademliaID.
 func NewRandomKademliaID() *KademliaID {
 	newKademliaID := KademliaID{}
-	for i := 0; i < IDLength; i++ {
-		newKademliaID[i] = uint8(rand.Intn(256))
+	if _, err := rand.Read(newKademliaID[:]); err != nil {
+		panic(fmt.Errorf("kademlia: failed to generate random ID: %w", err))
 	}
+
 	return &newKademliaID
 }
 

@@ -3,6 +3,6 @@ package network
 type Address string
 
 type Network interface {
-	Listen(ip string, port int) error
+	Listen(address Address) error
 	Send(to Address, bytes []byte) error
 }

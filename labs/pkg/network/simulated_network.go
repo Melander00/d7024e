@@ -2,7 +2,6 @@ package network
 
 import (
 	"errors"
-	"strconv"
 	"sync"
 )
 
@@ -30,8 +29,8 @@ func (simulation *Simulation) NewSimulatedNetwork(receiver NetworkReceiver) *Sim
 	}
 }
 
-func (net *SimulatedNetwork) Listen(ip string, port int) error {
-	net.Address = Address(ip + ":" + strconv.Itoa(port))
+func (net *SimulatedNetwork) Listen(address Address) error {
+	net.Address = address
 
 	net.simulation.mu.Lock()
 

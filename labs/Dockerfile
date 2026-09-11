@@ -22,4 +22,6 @@ RUN addgroup -g 1001 -S go && \
 
 COPY --from=builder --chown=user:go /app/kademlia-bin /app/kademlia-bin
 
+RUN chmod +x /app/kademlia-bin
+
 CMD ["/app/kademlia-bin"]

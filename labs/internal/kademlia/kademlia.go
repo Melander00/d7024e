@@ -1,6 +1,15 @@
 package kademlia
 
+import "d7024e/internal/kademlia/rpc"
+
 type Kademlia struct {
+	rpc *rpc.RPC
+}
+
+func NewKademliaNode(rpc *rpc.RPC) *Kademlia {
+	return &Kademlia{
+		rpc: rpc,
+	}
 }
 
 func (kademlia *Kademlia) LookupContact(target *Contact) {

@@ -3,7 +3,9 @@
 package main
 
 import (
+	"d7024e/internal/kademlia"
 	"d7024e/pkg/build"
+	"flag"
 	"fmt"
 )
 
@@ -15,6 +17,15 @@ var (
 func main() {
 	build.BuildVersion = BuildVersion
 	build.BuildTime = BuildTime
+
+	mockPtr := flag.Bool("mock", false, "to mock the network")
+
+	flag.Parse()
+
+	if *mockPtr {
+		// Start Mockup
+		kademlia.MockKademlia(1000)
+	}
 
 	// TODO
 	// Start Kademlia

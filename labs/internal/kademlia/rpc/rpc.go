@@ -38,21 +38,32 @@ func unmarshalMessage(data []byte) Message {
 }
 
 type RPC struct {
-	network network.Network
-	me      network.Address
+	network     network.Network
+	me          network.Address
+	readChannel chan []byte
 }
 
-func CreateRpc(net network.Network, me network.Address) *RPC {
-	return &RPC{
-		network: net,
-		me:      me,
+func CreateRpc(receiver network.NetworkReceiver, net network.Network, me network.Address) *RPC {
+
+	rpc := &RPC{
+		network:     net,
+		me:          me,
+		readChannel: make(chan []byte),
 	}
+
+	go receiver.Read(rpc.readChannel)
+	go rpc.Read()
+
+	return rpc
 }
 
-func (rpc *RPC) OnData(data []byte) {
-	// Decode data into JSON message
-
-	// Find the channel associated with requestId
+func (rpc *RPC) Read() {
+	for {
+		// data := <-rpc.readChannel
+		// msg = unmarshalMessage(data)
+		// Find Channel connected with msg.RequestId
+		// Forward the value
+	}
 }
 
 func (rpc *RPC) Ping(to network.Address) (Message, error) {

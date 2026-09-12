@@ -24,7 +24,8 @@ func main() {
 
 	if *mockPtr {
 		// Start Mockup
-		kademlia.MockKademlia(1000)
+		kademlia.MockKademlia(5)
+		return
 	}
 
 	// TODO

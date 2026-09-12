@@ -1,14 +1,42 @@
 package kademlia
 
-import "d7024e/internal/kademlia/rpc"
+import (
+	"d7024e/internal/kademlia/rpc"
+	"time"
+)
 
 type Kademlia struct {
-	rpc *rpc.RPC
+	Rpc       *rpc.RPC
+	ID        *KademliaID
+	Routing   *RoutingTable
+	Me        Contact
+	Datastore *DataStore
 }
 
-func NewKademliaNode(rpc *rpc.RPC) *Kademlia {
+type KademliaConfig struct {
+	alpha   int
+	k       int
+	timeout time.Duration
+	retries int
+}
+
+func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
+
+	id, _ := NewKademliaIDFromAddress(string(rpc.Me))
+
+	rpc.SetTimeout(config.timeout)
+	rpc.SetRetries(config.retries)
+
+	me := NewContact(id, string(rpc.Me))
+
+	routing := NewRoutingTable(me, config.k)
+
 	return &Kademlia{
-		rpc: rpc,
+		Rpc:       rpc,
+		ID:        id,
+		Me:        me,
+		Routing:   routing,
+		Datastore: NewDataStore(),
 	}
 }
 

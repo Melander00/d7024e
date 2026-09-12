@@ -8,11 +8,14 @@ import (
 // contains a List
 type bucket struct {
 	list *list.List
+	size int
 }
 
 // newBucket returns a new instance of a bucket
-func newBucket() *bucket {
-	bucket := &bucket{}
+func newBucket(size int) *bucket {
+	bucket := &bucket{
+		size: size,
+	}
 	bucket.list = list.New()
 	return bucket
 }
@@ -30,7 +33,7 @@ func (bucket *bucket) AddContact(contact Contact) {
 	}
 
 	if element == nil {
-		if bucket.list.Len() < bucketSize {
+		if bucket.list.Len() < bucket.size {
 			bucket.list.PushFront(contact)
 		}
 	} else {
@@ -38,7 +41,7 @@ func (bucket *bucket) AddContact(contact Contact) {
 	}
 }
 
-// GetContactAndCalcDistance returns an array of Contacts where 
+// GetContactAndCalcDistance returns an array of Contacts where
 // the distance has already been calculated
 func (bucket *bucket) GetContactAndCalcDistance(target *KademliaID) []Contact {
 	var contacts []Contact

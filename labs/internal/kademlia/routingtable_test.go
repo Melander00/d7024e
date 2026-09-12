@@ -9,7 +9,7 @@ import (
 // that is included as an example.
 
 func TestRoutingTable(t *testing.T) {
-	rt := NewRoutingTable(NewContact(parseTestKademliaID(t, "FFFFFFFF00000000000000000000000000000000000000000000000000000000"), "localhost:8000"))
+	rt := NewRoutingTable(NewContact(parseTestKademliaID(t, "FFFFFFFF00000000000000000000000000000000000000000000000000000000"), "localhost:8000"), 10)
 
 	rt.AddContact(NewContact(parseTestKademliaID(t, "FFFFFFFF00000000000000000000000000000000000000000000000000000000"), "localhost:8001"))
 	rt.AddContact(NewContact(parseTestKademliaID(t, "1111111100000000000000000000000000000000000000000000000000000000"), "localhost:8002"))

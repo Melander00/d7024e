@@ -9,7 +9,7 @@ type UdpNetwork struct {
 	receiver NetworkReceiver
 }
 
-func (net *UdpNetwork) Listen(address Address) error {
+func (net *UdpNetwork) Listen(address string) error {
 	// Create new UDP connection
 
 	// Create listener

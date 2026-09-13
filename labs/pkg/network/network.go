@@ -1,8 +1,6 @@
 package network
 
-type Address string
-
 type Network interface {
-	Listen(address Address) error
-	Send(to Address, bytes []byte) error
+	Listen(address string) error
+	Send(to string, bytes []byte) error
 }

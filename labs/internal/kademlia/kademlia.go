@@ -4,7 +4,6 @@ import (
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/datastore"
 	"d7024e/internal/kademlia/rpc"
-	"d7024e/pkg/network"
 	"time"
 )
 
@@ -26,19 +25,17 @@ type KademliaConfig struct {
 
 func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 
-	id, _ := contact.NewKademliaIDFromAddress(string(rpc.Me))
+	id, _ := contact.NewKademliaIDFromAddress(rpc.Me.Address)
 
 	rpc.SetTimeout(config.timeout)
 	rpc.SetRetries(config.retries)
 
-	me := contact.NewContact(id, string(rpc.Me))
-
-	routing := contact.NewRoutingTable(me, config.k)
+	routing := contact.NewRoutingTable(rpc.Me, config.k)
 
 	kademlia := &Kademlia{
 		Rpc:       rpc,
 		ID:        id,
-		Me:        me,
+		Me:        rpc.Me,
 		Routing:   routing,
 		Datastore: datastore.NewDataStore(),
 		Config:    &config,
@@ -63,10 +60,11 @@ type lookupResult struct {
 type lookupQuery func(contact.Contact, *contact.KademliaID) lookupResult
 
 func (kademlia *Kademlia) lookup(target *contact.KademliaID, query lookupQuery) ([]contact.Contact, []byte, error) {
-	kademlia.Routing.FindClosestContacts(target, kademlia.Config.k)
-
 	candidates := contact.ContactCandidates{}
 	candidates.Append(kademlia.Routing.FindClosestContacts(target, kademlia.Config.k))
+
+	candidates.RemoveMe(&kademlia.Me)
+
 	candidates.Sort()
 
 	queried := make(map[string]bool)
@@ -101,20 +99,23 @@ func (kademlia *Kademlia) lookup(target *contact.KademliaID, query lookupQuery) 
 		result := <-results
 		pending--
 
-		// TODO: Update routing table
-
 		if result.err != nil {
 			// TODO: error handling
 			// If the error is timeout we can assume it is dead for example
 			continue
 		}
 
+		for _, c := range result.contacts {
+			kademlia.Routing.AddContact(c)
+		}
+		kademlia.Routing.AddContact(result.contact)
+
 		if result.found {
 			return nil, result.value, nil
 		}
 
 		candidates.Append(result.contacts)
-		candidates.Sort()
+		candidates.SortNear(target)
 	}
 
 	// Return the k closest known contacts.
@@ -141,7 +142,7 @@ func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Conta
 	contacts, _, _ := kademlia.lookup(
 		target.ID,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
-			res, err := kademlia.Rpc.FindNode(network.Address(candidate.Address), target.String())
+			res, err := kademlia.Rpc.FindNode(candidate, target.String())
 
 			if err != nil {
 				return lookupResult{
@@ -166,7 +167,7 @@ func (kademlia *Kademlia) LookupData(hash string) []byte {
 	_, value, _ := kademlia.lookup(
 		target,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
-			res, err := kademlia.Rpc.FindValue(network.Address(candidate.Address), target.String())
+			res, err := kademlia.Rpc.FindValue(candidate, target.String())
 
 			if err != nil {
 				return lookupResult{
@@ -197,17 +198,20 @@ func (kademlia *Kademlia) Store(data []byte) {
 	// TODO
 }
 
-func (kademlia *Kademlia) pingHandler() {
+func (kademlia *Kademlia) pingHandler(client contact.Contact) {
+	kademlia.Routing.AddContact(client)
 	return // Ping shouldnt do anything.
 }
 
-func (kademlia *Kademlia) findNodeHandler(hash string) []contact.Contact {
+func (kademlia *Kademlia) findNodeHandler(client contact.Contact, hash string) []contact.Contact {
+	kademlia.Routing.AddContact(client)
 	target, _ := contact.ParseKademliaID(hash) // TODO: error handling
 
 	return kademlia.Routing.FindClosestContacts(target, kademlia.Config.k)
 }
 
-func (kademlia *Kademlia) findValueHandler(hash string) ([]contact.Contact, []byte, bool) {
+func (kademlia *Kademlia) findValueHandler(client contact.Contact, hash string) ([]contact.Contact, []byte, bool) {
+	kademlia.Routing.AddContact(client)
 	key, _ := contact.ParseKademliaID(hash) // TODO: error handling
 
 	data, has := kademlia.Datastore.Get(key)
@@ -218,7 +222,13 @@ func (kademlia *Kademlia) findValueHandler(hash string) ([]contact.Contact, []by
 	return kademlia.Routing.FindClosestContacts(key, kademlia.Config.k), nil, false
 }
 
-func (kademlia *Kademlia) storeHandler(key string, value []byte) bool {
+func (kademlia *Kademlia) storeHandler(client contact.Contact, key string, value []byte) bool {
+	kademlia.Routing.AddContact(client)
 	// TODO: Implement
 	return false
+}
+
+func (kademlia *Kademlia) Join(boot contact.Contact) {
+	kademlia.Routing.AddContact(boot)
+	kademlia.LookupContact(&kademlia.Me)
 }

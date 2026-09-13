@@ -2,6 +2,7 @@ package contact
 
 import (
 	"container/list"
+	"sync"
 )
 
 // bucket definition
@@ -9,6 +10,8 @@ import (
 type bucket struct {
 	list *list.List
 	size int
+
+	mu sync.RWMutex
 }
 
 // newBucket returns a new instance of a bucket
@@ -23,6 +26,9 @@ func newBucket(size int) *bucket {
 // AddContact adds the Contact to the front of the bucket
 // or moves it to the front of the bucket if it already existed
 func (bucket *bucket) AddContact(contact Contact) {
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+
 	var element *list.Element
 	for e := bucket.list.Front(); e != nil; e = e.Next() {
 		nodeID := e.Value.(Contact).ID
@@ -44,6 +50,9 @@ func (bucket *bucket) AddContact(contact Contact) {
 // GetContactAndCalcDistance returns an array of Contacts where
 // the distance has already been calculated
 func (bucket *bucket) GetContactAndCalcDistance(target *KademliaID) []Contact {
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+
 	var contacts []Contact
 
 	for elt := bucket.list.Front(); elt != nil; elt = elt.Next() {

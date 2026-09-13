@@ -26,6 +26,12 @@ func (contact *Contact) CalcDistance(target *KademliaID) {
 
 // Less returns true if contact.distance < otherContact.distance
 func (contact *Contact) Less(otherContact *Contact) bool {
+	if contact.distance == nil {
+		fmt.Printf("NIL: %s %s ME\n", contact.Address, contact.ID)
+	}
+	if otherContact.distance == nil {
+		fmt.Printf("NIL: %s %s OTHER\n", otherContact.Address, otherContact.ID)
+	}
 	return contact.distance.Less(otherContact.distance)
 }
 
@@ -57,6 +63,14 @@ func (candidates *ContactCandidates) Sort() {
 	sort.Sort(candidates)
 }
 
+func (candidates *ContactCandidates) SortNear(target *KademliaID) {
+	for i := range candidates.contacts {
+		candidates.contacts[i].CalcDistance(target)
+	}
+
+	sort.Sort(candidates)
+}
+
 // Len returns the length of the ContactCandidates
 func (candidates *ContactCandidates) Len() int {
 	return len(candidates.contacts)
@@ -72,4 +86,14 @@ func (candidates *ContactCandidates) Swap(i, j int) {
 // the Contact at index j
 func (candidates *ContactCandidates) Less(i, j int) bool {
 	return candidates.contacts[i].Less(&candidates.contacts[j])
+}
+
+func (candidates *ContactCandidates) RemoveMe(me *Contact) {
+	for i, cand := range candidates.contacts {
+		if cand.ID.Equals(me.ID) {
+			candidates.contacts = append(candidates.contacts[:i], candidates.contacts[i+1:]...)
+
+			return
+		}
+	}
 }

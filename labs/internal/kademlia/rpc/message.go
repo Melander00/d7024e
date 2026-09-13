@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"d7024e/internal/kademlia/contact"
-	"d7024e/pkg/network"
 	"encoding/json"
 )
 
@@ -30,7 +29,7 @@ type MessageValue struct {
 type Message struct {
 	Type      MessageType
 	RequestID string
-	Sender    network.Address
+	Sender    contact.Contact
 	Value     MessageValue
 }
 

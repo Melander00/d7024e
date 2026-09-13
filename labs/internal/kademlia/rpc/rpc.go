@@ -10,16 +10,16 @@ import (
 
 type RPC struct {
 	network          network.Network
-	Me               network.Address
+	Me               contact.Contact
 	pending          map[string]*Request
 	readChannel      chan []byte
 	mu               sync.RWMutex
 	timeout          time.Duration
 	retries          int
-	pingHandler      func()
-	findNodeHandler  func(hash string) []contact.Contact
-	findValueHandler func(hash string) ([]contact.Contact, []byte, bool)
-	storeHandler     func(key string, value []byte) bool
+	pingHandler      func(client contact.Contact)
+	findNodeHandler  func(client contact.Contact, hash string) []contact.Contact
+	findValueHandler func(client contact.Contact, hash string) ([]contact.Contact, []byte, bool)
+	storeHandler     func(client contact.Contact, key string, value []byte) bool
 }
 
 type Request struct {
@@ -30,7 +30,7 @@ type Request struct {
 	handled bool
 }
 
-func CreateRpc(receiver network.NetworkReceiver, net network.Network, me network.Address) *RPC {
+func CreateRpc(receiver network.NetworkReceiver, net network.Network, me contact.Contact) *RPC {
 
 	rpc := &RPC{
 		network:     net,
@@ -78,7 +78,7 @@ func (rpc *RPC) handleRequest(msg Message) {
 			break
 		}
 
-		rpc.pingHandler()
+		rpc.pingHandler(msg.Sender)
 		res = rpc.createMessage(PONG)
 
 		break
@@ -88,7 +88,7 @@ func (rpc *RPC) handleRequest(msg Message) {
 			break
 		}
 
-		data := rpc.findNodeHandler(msg.Value.Hash)
+		data := rpc.findNodeHandler(msg.Sender, msg.Value.Hash)
 		res = rpc.createMessage(FIND_NODE_RESPONSE)
 		res.Value = FindNodeResponse(data)
 
@@ -98,7 +98,7 @@ func (rpc *RPC) handleRequest(msg Message) {
 			break
 		}
 
-		candidates, data, hasValue := rpc.findValueHandler(msg.Value.Hash)
+		candidates, data, hasValue := rpc.findValueHandler(msg.Sender, msg.Value.Hash)
 		res = rpc.createMessage(FIND_VALUE_RESPONSE)
 		if hasValue {
 			res.Value = FindValueResponse(data)
@@ -113,7 +113,7 @@ func (rpc *RPC) handleRequest(msg Message) {
 			break
 		}
 
-		data := rpc.storeHandler(msg.Value.Key, msg.Value.Value)
+		data := rpc.storeHandler(msg.Sender, msg.Value.Key, msg.Value.Value)
 		res = rpc.createMessage(STORE_RESPONSE)
 		res.Value = StoreResponse(data)
 
@@ -127,8 +127,8 @@ func (rpc *RPC) handleRequest(msg Message) {
 	rpc.respond(msg.Sender, marshalMessage(res))
 }
 
-func (rpc *RPC) send(to network.Address, req *Request, data []byte, tryNr int) (*Message, error) {
-	error := rpc.network.Send(to, data) // TODO: Error handling
+func (rpc *RPC) send(to contact.Contact, req *Request, data []byte, tryNr int) (*Message, error) {
+	error := rpc.network.Send(to.Address, data) // TODO: Error handling
 	if error != nil {
 		return nil, error
 	}
@@ -148,11 +148,11 @@ func (rpc *RPC) send(to network.Address, req *Request, data []byte, tryNr int) (
 	}
 }
 
-func (rpc *RPC) respond(to network.Address, data []byte) {
-	rpc.network.Send(to, data)
+func (rpc *RPC) respond(to contact.Contact, data []byte) {
+	rpc.network.Send(to.Address, data)
 }
 
-func (rpc *RPC) Ping(to network.Address) (*Message, error) {
+func (rpc *RPC) Ping(to contact.Contact) (*Message, error) {
 	msg := rpc.createMessage(PING)
 	req := rpc.createRequest(msg.RequestID)
 
@@ -160,7 +160,7 @@ func (rpc *RPC) Ping(to network.Address) (*Message, error) {
 	return rpc.send(to, req, data, 1)
 }
 
-func (rpc *RPC) Store(to network.Address, key string, value []byte) (*Message, error) {
+func (rpc *RPC) Store(to contact.Contact, key string, value []byte) (*Message, error) {
 	msg := rpc.createMessage(STORE)
 	req := rpc.createRequest(msg.RequestID)
 	msg.Value = StoreRequest(key, value)
@@ -170,7 +170,7 @@ func (rpc *RPC) Store(to network.Address, key string, value []byte) (*Message, e
 
 }
 
-func (rpc *RPC) FindNode(to network.Address, id string) (*Message, error) {
+func (rpc *RPC) FindNode(to contact.Contact, id string) (*Message, error) {
 	msg := rpc.createMessage(FIND_NODE)
 	req := rpc.createRequest(msg.RequestID)
 	msg.Value = FindNodeRequest(id)
@@ -179,7 +179,7 @@ func (rpc *RPC) FindNode(to network.Address, id string) (*Message, error) {
 	return rpc.send(to, req, data, 1)
 }
 
-func (rpc *RPC) FindValue(to network.Address, id string) (*Message, error) {
+func (rpc *RPC) FindValue(to contact.Contact, id string) (*Message, error) {
 	msg := rpc.createMessage(FIND_VALUE)
 	req := rpc.createRequest(msg.RequestID)
 	msg.Value = FindValueRequest(id)
@@ -230,18 +230,18 @@ func (rpc *RPC) createRequest(requestID string) *Request {
 
 */
 
-func (rpc *RPC) SetPingHandler(handler func()) {
+func (rpc *RPC) SetPingHandler(handler func(client contact.Contact)) {
 	rpc.pingHandler = handler
 }
 
-func (rpc *RPC) SetFindNodeHandler(handler func(hash string) []contact.Contact) {
+func (rpc *RPC) SetFindNodeHandler(handler func(client contact.Contact, hash string) []contact.Contact) {
 	rpc.findNodeHandler = handler
 }
 
-func (rpc *RPC) SetFindValueHandler(handler func(hash string) ([]contact.Contact, []byte, bool)) {
+func (rpc *RPC) SetFindValueHandler(handler func(client contact.Contact, hash string) ([]contact.Contact, []byte, bool)) {
 	rpc.findValueHandler = handler
 }
 
-func (rpc *RPC) SetStoreHandler(handler func(key string, value []byte) bool) {
+func (rpc *RPC) SetStoreHandler(handler func(client contact.Contact, key string, value []byte) bool) {
 	rpc.storeHandler = handler
 }

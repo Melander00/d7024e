@@ -1,11 +1,15 @@
 package contact
 
+import "sync"
+
 // RoutingTable definition
 // keeps a refrence contact of me and an array of buckets
 type RoutingTable struct {
 	me         Contact
 	buckets    [IDLength * 8]*bucket
 	bucketSize int
+
+	mu sync.RWMutex
 }
 
 // NewRoutingTable returns a new instance of a RoutingTable
@@ -22,6 +26,11 @@ func NewRoutingTable(me Contact, bucketSize int) *RoutingTable {
 
 // AddContact add a new contact to the correct Bucket
 func (routingTable *RoutingTable) AddContact(contact Contact) {
+	routingTable.mu.Lock()
+	defer routingTable.mu.Unlock()
+	if contact.ID.Equals(routingTable.me.ID) {
+		return
+	}
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
 	bucket := routingTable.buckets[bucketIndex]
 	bucket.AddContact(contact)
@@ -29,6 +38,9 @@ func (routingTable *RoutingTable) AddContact(contact Contact) {
 
 // FindClosestContacts finds the count closest Contacts to the target in the RoutingTable
 func (routingTable *RoutingTable) FindClosestContacts(target *KademliaID, count int) []Contact {
+	routingTable.mu.RLock()
+	defer routingTable.mu.RUnlock()
+
 	var candidates ContactCandidates
 	bucketIndex := routingTable.getBucketIndex(target)
 	bucket := routingTable.buckets[bucketIndex]

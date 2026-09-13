@@ -8,17 +8,17 @@ import (
 type SimulatedNetwork struct {
 	receiver   NetworkReceiver
 	simulation *Simulation
-	Address    Address
+	Address    string
 }
 
 type Simulation struct {
 	mu    sync.RWMutex
-	nodes map[Address]*SimulatedNetwork
+	nodes map[string]*SimulatedNetwork
 }
 
 func NewSimulation() *Simulation {
 	return &Simulation{
-		nodes: make(map[Address]*SimulatedNetwork),
+		nodes: make(map[string]*SimulatedNetwork),
 	}
 }
 
@@ -29,7 +29,7 @@ func (simulation *Simulation) NewSimulatedNetwork(receiver NetworkReceiver) *Sim
 	}
 }
 
-func (net *SimulatedNetwork) Listen(address Address) error {
+func (net *SimulatedNetwork) Listen(address string) error {
 	net.Address = address
 
 	net.simulation.mu.Lock()
@@ -41,7 +41,7 @@ func (net *SimulatedNetwork) Listen(address Address) error {
 	return nil
 }
 
-func (net *SimulatedNetwork) Send(to Address, bytes []byte) error {
+func (net *SimulatedNetwork) Send(to string, bytes []byte) error {
 	net.simulation.mu.RLock()
 
 	dest, exists := net.simulation.nodes[to]

@@ -1,4 +1,4 @@
-package kademlia
+package contact
 
 import (
 	"crypto/rand"

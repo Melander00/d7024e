@@ -1,4 +1,4 @@
-package kademlia
+package contact
 
 // RoutingTable definition
 // keeps a refrence contact of me and an array of buckets

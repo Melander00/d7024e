@@ -20,8 +20,7 @@ func (rec *ChannelNetworkReceiver) OnData(data []byte) {
 }
 
 func (rec *ChannelNetworkReceiver) Read(out chan []byte) {
-	for {
-		data := <-rec.channel
+	for data := range rec.channel {
 		out <- data
 	}
 }

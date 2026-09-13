@@ -1,4 +1,4 @@
-package kademlia
+package contact
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ func NewContact(id *KademliaID, address string) Contact {
 	return Contact{id, address, nil}
 }
 
-// CalcDistance calculates the distance to the target and 
+// CalcDistance calculates the distance to the target and
 // fills the contacts distance field
 func (contact *Contact) CalcDistance(target *KademliaID) {
 	contact.distance = contact.ID.CalcDistance(target)
@@ -42,6 +42,8 @@ type ContactCandidates struct {
 
 // Append an array of Contacts to the ContactCandidates
 func (candidates *ContactCandidates) Append(contacts []Contact) {
+	// TODO: Deduplicating so that we dont store the same contact multiple times.
+	// Use ID to remove duplicates.
 	candidates.contacts = append(candidates.contacts, contacts...)
 }
 
@@ -66,7 +68,7 @@ func (candidates *ContactCandidates) Swap(i, j int) {
 	candidates.contacts[i], candidates.contacts[j] = candidates.contacts[j], candidates.contacts[i]
 }
 
-// Less returns true if the Contact at index i is smaller than 
+// Less returns true if the Contact at index i is smaller than
 // the Contact at index j
 func (candidates *ContactCandidates) Less(i, j int) bool {
 	return candidates.contacts[i].Less(&candidates.contacts[j])

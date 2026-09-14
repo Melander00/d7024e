@@ -26,12 +26,6 @@ func (contact *Contact) CalcDistance(target *KademliaID) {
 
 // Less returns true if contact.distance < otherContact.distance
 func (contact *Contact) Less(otherContact *Contact) bool {
-	if contact.distance == nil {
-		fmt.Printf("NIL: %s %s ME\n", contact.Address, contact.ID)
-	}
-	if otherContact.distance == nil {
-		fmt.Printf("NIL: %s %s OTHER\n", otherContact.Address, otherContact.ID)
-	}
 	return contact.distance.Less(otherContact.distance)
 }
 
@@ -55,7 +49,8 @@ func (candidates *ContactCandidates) Append(contacts []Contact) {
 
 // GetContacts returns the first count number of Contacts
 func (candidates *ContactCandidates) GetContacts(count int) []Contact {
-	return candidates.contacts[:count]
+	m := min(candidates.Len(), count)
+	return candidates.contacts[:m]
 }
 
 // Sort the Contacts in ContactCandidates

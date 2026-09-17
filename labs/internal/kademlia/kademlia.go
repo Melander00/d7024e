@@ -161,10 +161,14 @@ func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Conta
 	return contacts
 }
 
-func (kademlia *Kademlia) LookupData(hash string) []byte {
-	target, _ := contact.ParseKademliaID(hash)
+func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
+	target, err := contact.ParseKademliaID(hash)
 
-	_, value, _ := kademlia.lookup(
+	if err != nil {
+		return nil, err
+	}
+
+	_, value, err := kademlia.lookup(
 		target,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
 			res, err := kademlia.Rpc.FindValue(candidate, target.String())
@@ -191,7 +195,7 @@ func (kademlia *Kademlia) LookupData(hash string) []byte {
 		},
 	)
 
-	return value
+	return value, err
 }
 
 func (kademlia *Kademlia) Store(data []byte) {

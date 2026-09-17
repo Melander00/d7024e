@@ -110,7 +110,7 @@ func TestKademliaLookupDataFound(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result := nodeB.LookupData(key.String())
+	result, _ := nodeB.LookupData(key.String())
 
 	if !bytes.Equal(result, expectedData) {
 		t.Fatalf("expected data %q, got %q", expectedData, result)
@@ -129,7 +129,7 @@ func TestKademliaLookupDataMissing(t *testing.T) {
 
 	missingKey := contact.NewRandomKademliaID()
 
-	result := nodeB.LookupData(missingKey.String())
+	result, _ := nodeB.LookupData(missingKey.String())
 
 	if len(result) != 0 {
 		t.Fatalf("expected empty result for missing key, got %q", result)
@@ -155,7 +155,7 @@ func TestKademliaStoreAndLookupData(t *testing.T) {
 	hashBytes := sha256.Sum256(data)
 	hash := hex.EncodeToString(hashBytes[:])
 
-	result := nodeC.LookupData(hash)
+	result, _ := nodeC.LookupData(hash)
 
 	if !bytes.Equal(result, data) {
 		t.Fatalf("expected stored data %q, got %q", data, result)

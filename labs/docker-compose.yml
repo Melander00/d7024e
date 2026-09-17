@@ -5,29 +5,54 @@
 # command line flags, in order to actually get any replicas started. That
 # command requires that a docker swarm is already running in order to function.
 
-version: "3"
+# version: "3"
+# services:
+#   kademliaNodes:
+#     image: kadlab:latest # Make sure your Docker image has this name.
+#     stdin_open: true
+#     tty: true
+#     deploy:
+#       mode: replicated
+#       replicas: 5  
+# #        resources:
+# #           limits:
+# #              cpus: "0.1"
+# #              memory: 50M
+#       restart_policy:
+#         condition: on-failure
+#         delay: 5s
+#         max_attempts: 3
+#         window: 10s
+# #    ports:
+# #      - "4000:80"
+#     networks:
+#       - kademlia_network
+      
+# networks:
+#   kademlia_network:
+
+# name: "kadlab"
+
 services:
-  kademliaNodes:
-    image: kadlab:latest # Make sure your Docker image has this name.
+  bootstrap:
+    build: .
     stdin_open: true
     tty: true
-    deploy:
-      mode: replicated
-      replicas: 5  
-#        resources:
-#           limits:
-#              cpus: "0.1"
-#              memory: 50M
-      restart_policy:
-        condition: on-failure
-        delay: 5s
-        max_attempts: 3
-        window: 10s
-#    ports:
-#      - "4000:80"
     networks:
-      - kademlia_network
-      
-networks:
-  kademlia_network:
+      - kademlia
 
+  node:
+    build: .
+    stdin_open: true
+    tty: true
+    environment:
+      BOOTSTRAP: "bootstrap:8080"
+    depends_on:
+      - bootstrap
+    networks:
+      - kademlia
+    # deploy:
+    #   replicas: 49
+
+networks:
+  kademlia:

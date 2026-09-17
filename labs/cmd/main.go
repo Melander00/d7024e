@@ -3,10 +3,19 @@
 package main
 
 import (
+	"d7024e/internal/cli"
 	"d7024e/internal/kademlia"
+	"d7024e/internal/kademlia/contact"
+	"d7024e/internal/kademlia/rpc"
 	"d7024e/pkg/build"
+	"d7024e/pkg/network"
+	"errors"
 	"flag"
 	"fmt"
+	"log"
+	"net"
+	"os"
+	"time"
 )
 
 var (
@@ -28,18 +37,103 @@ func main() {
 		return
 	}
 
-	// TODO
-	// Start Kademlia
-	// Open tty with cli commands.
-	fmt.Println("Starting kademlia node...")
+	config := kademlia.KademliaConfig{
+		Alpha:   3,
+		K:       10,
+		Timeout: 5 * time.Second,
+		Retries: 5,
+	}
+
+	ip, err := localIP()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	receiver := network.NewChannelNetworkReceiver(5)
+	net := network.NewUdpNetwork(receiver)
+	address := ip.String() + ":8080"
+	go net.Listen(":8080")
+	id, _ := contact.NewKademliaIDFromAddress(address)
+	me := contact.NewContact(id, address)
+	rpc := rpc.CreateRpc(receiver, net, me)
+	node := kademlia.NewKademliaNode(config, rpc)
+
+	checkJoinNetwork(node)
+
+	cli.StartCLI(node, address)
 }
 
-// NOTE: NewKademliaID is deprecated use ParseKademliaID instead.
-// func main() {
-// 	fmt.Println("Pretending to run the kademlia app...")
-// 	// Using stuff from the kademlia package here. Something like...
-// 	id := kademlia.NewKademliaID("FFFFFFFF00000000000000000000000000000000000000000000000000000000")
-// 	contact := kademlia.NewContact(id, "localhost:8000")
-// 	fmt.Println(contact.String())
-// 	fmt.Printf("%v\n", contact)
-// }
+func localIP() (net.IP, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, iface := range interfaces {
+		if iface.Name == "lo" {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			ipNet, ok := addr.(*net.IPNet)
+			if !ok {
+				continue
+			}
+
+			ip := ipNet.IP
+			if ip.IsLoopback() || ip.To4() == nil {
+				continue
+			}
+
+			return ip, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no local IPv4 address found")
+}
+
+func checkJoinNetwork(node *kademlia.Kademlia) {
+	addr, exists := os.LookupEnv("BOOTSTRAP")
+
+	if !exists {
+		return
+	}
+
+	boot, err := getBootstrapContact(addr)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	go node.Join(boot)
+
+	fmt.Printf("%s joining boot at %s\n", node.Me.Address, addr)
+}
+
+func getBootstrapContact(addr string) (contact.Contact, error) {
+
+	if addr == "" {
+		return contact.Contact{}, errors.New("BOOTSTRAP env not set")
+	}
+
+	resolved, err := net.ResolveUDPAddr("udp", addr)
+	if err != nil {
+		return contact.Contact{}, fmt.Errorf("resolve bootstrap %q: %w", addr, err)
+	}
+
+	resolvedAddr := resolved.String()
+
+	id, err := contact.NewKademliaIDFromAddress(resolvedAddr)
+
+	if err != nil {
+		return contact.Contact{}, err
+	}
+
+	return contact.NewContact(id, addr), nil
+}

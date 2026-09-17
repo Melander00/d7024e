@@ -135,5 +135,5 @@ func getBootstrapContact(addr string) (contact.Contact, error) {
 		return contact.Contact{}, err
 	}
 
-	return contact.NewContact(id, addr), nil
+	return contact.NewContact(id, resolvedAddr), nil
 }

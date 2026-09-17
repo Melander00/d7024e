@@ -31,7 +31,7 @@
 # networks:
 #   kademlia_network:
 
-# name: "kadlab"
+name: "kadlab"
 
 services:
   bootstrap:
@@ -40,6 +40,8 @@ services:
     tty: true
     networks:
       - kademlia
+    volumes:
+      - ./data:/app/data
 
   node:
     build: .
@@ -51,6 +53,8 @@ services:
       - bootstrap
     networks:
       - kademlia
+    volumes:
+      - ./data:/app/data
     # deploy:
     #   replicas: 49
 

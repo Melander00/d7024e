@@ -8,7 +8,7 @@ docker compose up --build --scale node=2
 You can attach to the CLI using:
 ```bash
 docker compose attach bootstrap
-docker compose attach node-X
+docker attach kadlab-node-X
 ```
 where X is a specific non-bootstrap node.
 Use keyboard shortcuts `Ctrl+P` followed by `Ctrl+Q` to detach.

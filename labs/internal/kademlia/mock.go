@@ -21,10 +21,10 @@ func MockKademlia(nrNodes int) {
 	simulation := network.NewSimulation()
 
 	config := KademliaConfig{
-		alpha:   3,
-		k:       10,
-		timeout: 5 * time.Second,
-		retries: 5,
+		Alpha:   3,
+		K:       10,
+		Timeout: 5 * time.Second,
+		Retries: 5,
 	}
 
 	mock := &Mock{

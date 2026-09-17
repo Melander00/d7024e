@@ -17,20 +17,20 @@ type Kademlia struct {
 }
 
 type KademliaConfig struct {
-	alpha   int
-	k       int
-	timeout time.Duration
-	retries int
+	Alpha   int
+	K       int
+	Timeout time.Duration
+	Retries int
 }
 
 func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 
 	id, _ := contact.NewKademliaIDFromAddress(rpc.Me.Address)
 
-	rpc.SetTimeout(config.timeout)
-	rpc.SetRetries(config.retries)
+	rpc.SetTimeout(config.Timeout)
+	rpc.SetRetries(config.Retries)
 
-	routing := contact.NewRoutingTable(rpc.Me, config.k)
+	routing := contact.NewRoutingTable(rpc.Me, config.K)
 
 	kademlia := &Kademlia{
 		Rpc:       rpc,
@@ -61,20 +61,20 @@ type lookupQuery func(contact.Contact, *contact.KademliaID) lookupResult
 
 func (kademlia *Kademlia) lookup(target *contact.KademliaID, query lookupQuery) ([]contact.Contact, []byte, error) {
 	candidates := contact.ContactCandidates{}
-	candidates.Append(kademlia.Routing.FindClosestContacts(target, kademlia.Config.k))
+	candidates.Append(kademlia.Routing.FindClosestContacts(target, kademlia.Config.K))
 
 	candidates.RemoveMe(&kademlia.Me)
 
 	candidates.Sort()
 
 	queried := make(map[string]bool)
-	results := make(chan lookupResult, kademlia.Config.alpha)
+	results := make(chan lookupResult, kademlia.Config.Alpha)
 
 	pending := 0
 
 	for {
 
-		for pending < kademlia.Config.alpha {
+		for pending < kademlia.Config.Alpha {
 
 			candidate, ok := getNextCandidate(&candidates, queried)
 
@@ -119,8 +119,8 @@ func (kademlia *Kademlia) lookup(target *contact.KademliaID, query lookupQuery) 
 	}
 
 	// Return the k closest known contacts.
-	if candidates.Len() > kademlia.Config.k {
-		return candidates.GetContacts(kademlia.Config.k), nil, nil
+	if candidates.Len() > kademlia.Config.K {
+		return candidates.GetContacts(kademlia.Config.K), nil, nil
 	}
 
 	return candidates.GetContacts(candidates.Len()), nil, nil
@@ -207,7 +207,7 @@ func (kademlia *Kademlia) findNodeHandler(client contact.Contact, hash string) [
 	kademlia.Routing.AddContact(client)
 	target, _ := contact.ParseKademliaID(hash) // TODO: error handling
 
-	return kademlia.Routing.FindClosestContacts(target, kademlia.Config.k)
+	return kademlia.Routing.FindClosestContacts(target, kademlia.Config.K)
 }
 
 func (kademlia *Kademlia) findValueHandler(client contact.Contact, hash string) ([]contact.Contact, []byte, bool) {
@@ -219,7 +219,7 @@ func (kademlia *Kademlia) findValueHandler(client contact.Contact, hash string) 
 		return nil, data, true
 	}
 
-	return kademlia.Routing.FindClosestContacts(key, kademlia.Config.k), nil, false
+	return kademlia.Routing.FindClosestContacts(key, kademlia.Config.K), nil, false
 }
 
 func (kademlia *Kademlia) storeHandler(client contact.Contact, key string, value []byte) bool {

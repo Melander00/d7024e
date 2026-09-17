@@ -32,10 +32,10 @@ func createTestNode(t *testing.T, simulation *network.Simulation, address string
 	rpcNode := rpc.CreateRpc(receiver, net, me)
 
 	config := KademliaConfig{
-		alpha:   3,
-		k:       10,
-		timeout: 500 * time.Millisecond,
-		retries: 2,
+		Alpha:   3,
+		K:       10,
+		Timeout: 500 * time.Millisecond,
+		Retries: 2,
 	}
 
 	return NewKademliaNode(config, rpcNode)

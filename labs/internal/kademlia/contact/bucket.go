@@ -68,3 +68,17 @@ func (bucket *bucket) GetContactAndCalcDistance(target *KademliaID) []Contact {
 func (bucket *bucket) Len() int {
 	return bucket.list.Len()
 }
+
+func (bucket *bucket) GetContacts() []Contact {
+	bucket.mu.RLock()
+	defer bucket.mu.RUnlock()
+
+	var contacts []Contact
+
+	for elt := bucket.list.Front(); elt != nil; elt = elt.Next() {
+		contact := elt.Value.(Contact)
+		contacts = append(contacts, contact)
+	}
+
+	return contacts
+}

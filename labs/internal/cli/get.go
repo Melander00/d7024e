@@ -1,6 +1,11 @@
 package cli
 
-import "d7024e/internal/kademlia"
+import (
+	"d7024e/internal/kademlia"
+	"fmt"
+	"os"
+	"path/filepath"
+)
 
 /*
 
@@ -23,7 +28,30 @@ func CLIGet(node *kademlia.Kademlia) *getCmd {
 }
 
 func (cmd *getCmd) handle(args []string) {
+	if len(args) == 1 {
+		fmt.Println(cmd.getHelp())
+		return
+	}
 
+	hash := args[1]
+
+	// TODO: Error handling
+	data, err := cmd.node.LookupData(hash)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if len(args) >= 3 {
+
+		filename := args[2]
+		path := filepath.Join(filename)
+		os.WriteFile(path, data, 0644)
+
+	} else {
+		fmt.Printf("  DATA: %s\n", string(data))
+	}
 }
 
 func (cmd *getCmd) getName() string {
@@ -31,5 +59,5 @@ func (cmd *getCmd) getName() string {
 }
 
 func (cmd *getCmd) getHelp() string {
-	return `get <key> [filename] - downloads a file and optionally saves the file`
+	return `get <key> [filename] - downloads data and optionally saves it to a file`
 }

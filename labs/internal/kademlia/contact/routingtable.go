@@ -80,3 +80,7 @@ func (routingTable *RoutingTable) getBucketIndex(id *KademliaID) int {
 
 	return IDLength*8 - 1
 }
+
+func (routingTable *RoutingTable) GetBuckets() [256]*bucket {
+	return routingTable.buckets
+}

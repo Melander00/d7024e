@@ -1,6 +1,9 @@
 package cli
 
-import "d7024e/internal/kademlia"
+import (
+	"d7024e/internal/kademlia"
+	"os"
+)
 
 /*
 
@@ -22,6 +25,8 @@ func CLIExit(node *kademlia.Kademlia) *exitCmd {
 }
 
 func (cmd *exitCmd) handle(args []string) {
+
+	os.Exit(0)
 
 }
 

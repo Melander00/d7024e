@@ -7,30 +7,64 @@ import (
 type UdpNetwork struct {
 	conn     *net.UDPConn
 	receiver NetworkReceiver
+	Address  string
 }
 
-func (net *UdpNetwork) Listen(address string) error {
-	// Create new UDP connection
+func NewUdpNetwork(receiver NetworkReceiver) *UdpNetwork {
+	return &UdpNetwork{
+		receiver: receiver,
+	}
+}
 
-	// Create listener
+func (n *UdpNetwork) Listen(address string) error {
+	n.Address = address
 
-	// Start goroutine that constantly receives data
-	// It should forward the data to RPC
+	addr, _ := net.ResolveUDPAddr("udp", address)
 
-	go net.receive()
+	conn, err := net.ListenUDP("udp", addr)
+
+	if err != nil {
+		// TODO
+		return err
+	}
+
+	n.conn = conn
+
+	go n.receive()
 
 	return nil
 }
 
-func (net *UdpNetwork) Send(to string, bytes []byte) error {
-	// Translate Contact to UDP address
-	// Send message via UDP
+func (n *UdpNetwork) Send(to string, bytes []byte) error {
+	addr, err := net.ResolveUDPAddr("udp", to)
+	if err != nil {
+		// TODO
+		return err
+	}
+
+	_, writeErr := n.conn.WriteToUDP(bytes, addr)
+	if writeErr != nil {
+		// TODO
+		return writeErr
+	}
 
 	return nil
 }
 
-func (net *UdpNetwork) receive() {
-	// While True
-	// Read bytestream
-	// net.receiver.OnData(data)
+func (n *UdpNetwork) receive() {
+	buf := make([]byte, 2048)
+	defer n.conn.Close()
+	for {
+		nr, _, err := n.conn.ReadFromUDP(buf)
+
+		if err != nil {
+			// TODO
+			continue
+		}
+
+		// Copy so the buffer doesnt get overwritten due to race condition.
+		data := append([]byte(nil), buf[:nr]...)
+
+		go n.receiver.OnData(data)
+	}
 }

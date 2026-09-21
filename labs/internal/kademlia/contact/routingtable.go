@@ -1,6 +1,9 @@
 package contact
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // RoutingTable definition
 // keeps a refrence contact of me and an array of buckets
@@ -81,6 +84,37 @@ func (routingTable *RoutingTable) getBucketIndex(id *KademliaID) int {
 	return IDLength*8 - 1
 }
 
+func (routingTable *RoutingTable) BucketIndex(
+	id *KademliaID,
+) int {
+	return routingTable.getBucketIndex(id)
+}
+
 func (routingTable *RoutingTable) GetBuckets() [256]*bucket {
 	return routingTable.buckets
+}
+
+// MarkLookup marks the last lookup time for the bucket corresponding to the target KademliaID
+func (routingTable *RoutingTable) MarkLookup(target *KademliaID) {
+	bucketIndex := routingTable.getBucketIndex(target)
+
+	bucket := routingTable.buckets[bucketIndex]
+
+	bucket.MarkLookup()
+}
+
+// BucketsNeedingRefresh returns a list of bucket indices that need to be refreshed based on the given interval.
+func (routingTable *RoutingTable) BucketsNeedingRefresh(
+	interval time.Duration,
+) []int {
+
+	stale := []int{}
+
+	for index, bucket := range routingTable.buckets {
+		if bucket.NeedsRefresh(interval) {
+			stale = append(stale, index)
+		}
+	}
+
+	return stale
 }

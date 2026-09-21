@@ -17,11 +17,15 @@ type Kademlia struct {
 }
 
 type KademliaConfig struct {
-	Alpha   int
-	K       int
-	Timeout time.Duration
-	Retries int
+	Alpha                 int
+	K                     int
+	Timeout               time.Duration
+	Retries               int
+	BucketRefreshInterval time.Duration
 }
+
+// defaultBucketRefreshInterval is used when a config leaves BucketRefreshInterval unset.
+const defaultBucketRefreshInterval = time.Hour
 
 func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 
@@ -29,6 +33,10 @@ func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 
 	rpc.SetTimeout(config.Timeout)
 	rpc.SetRetries(config.Retries)
+
+	if config.BucketRefreshInterval <= 0 {
+		config.BucketRefreshInterval = defaultBucketRefreshInterval
+	}
 
 	routing := contact.NewRoutingTable(rpc.Me, config.K)
 
@@ -139,6 +147,11 @@ func getNextCandidate(candidates *contact.ContactCandidates, queried map[string]
 }
 
 func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Contact {
+	// Self-lookups have no bucket (XOR distance is zero)
+	if !target.ID.Equals(kademlia.ID) {
+		kademlia.Routing.MarkLookup(target.ID)
+	}
+
 	contacts, _, _ := kademlia.lookup(
 		target.ID,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
@@ -235,4 +248,24 @@ func (kademlia *Kademlia) storeHandler(client contact.Contact, key string, value
 func (kademlia *Kademlia) Join(boot contact.Contact) {
 	kademlia.Routing.AddContact(boot)
 	kademlia.LookupContact(&kademlia.Me)
+	// Find closest node we now know.
+	closest := kademlia.Routing.FindClosestContacts(
+		kademlia.ID,
+		1,
+	)
+
+	if len(closest) == 0 {
+		return
+	}
+
+	// Find the bucket containing that closest neighbor.
+	closestBucket :=
+		kademlia.Routing.BucketIndex(closest[0].ID)
+
+	// Our indexing has farther buckets at smaller indexes.
+	for bucketIndex := 0; bucketIndex < closestBucket; bucketIndex++ {
+
+		kademlia.refreshBucket(bucketIndex)
+	}
+
 }

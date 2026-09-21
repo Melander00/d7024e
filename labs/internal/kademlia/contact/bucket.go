@@ -3,15 +3,16 @@ package contact
 import (
 	"container/list"
 	"sync"
+	"time"
 )
 
 // bucket definition
 // contains a List
 type bucket struct {
-	list *list.List
-	size int
-
-	mu sync.RWMutex
+	list       *list.List
+	size       int
+	lastLookup time.Time
+	mu         sync.RWMutex
 }
 
 // newBucket returns a new instance of a bucket
@@ -81,4 +82,24 @@ func (bucket *bucket) GetContacts() []Contact {
 	}
 
 	return contacts
+}
+
+// MarkLookup updates the last lookup time for the bucket to the current time.
+func (bucket *bucket) MarkLookup() {
+	bucket.mu.Lock()
+	defer bucket.mu.Unlock()
+
+	bucket.lastLookup = time.Now()
+}
+
+// NeedsRefresh checks if the bucket needs to be refreshed based on the given interval.
+func (bucket *bucket) NeedsRefresh(interval time.Duration) bool {
+	bucket.mu.RLock()
+	defer bucket.mu.RUnlock()
+
+	if bucket.lastLookup.IsZero() {
+		return true
+	}
+
+	return time.Since(bucket.lastLookup) >= interval
 }

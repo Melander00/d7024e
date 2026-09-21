@@ -56,6 +56,44 @@ func TestNewIDFromInvalidAddress(t *T) {
 	}
 }
 
+func TestNewIDFromData(t *T) {
+	expected := "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
+
+	first := NewKademliaIDFromData([]byte("hello"))
+	second := NewKademliaIDFromData([]byte("hello"))
+
+	if first.String() != expected {
+		t.Fatalf("hash is wrong %s but should've been %s", first.String(), expected)
+	}
+
+	if !first.Equals(second) {
+		t.Fatalf("identical data should produce identical IDs: %s | %s", first.String(), second.String())
+	}
+
+	if len(first.String()) != IDLength*2 {
+		t.Fatalf("expected ID string length %d, got %d", IDLength*2, len(first.String()))
+	}
+}
+
+func TestParseMalformedKademliaID(t *T) {
+	tests := []struct {
+		name string
+		key  string
+	}{
+		{name: "too short", key: "00"},
+		{name: "too long", key: "000000000000000000000000000000000000000000000000000000000000000000"},
+		{name: "invalid hex", key: "zz00000000000000000000000000000000000000000000000000000000000000"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *T) {
+			if _, err := ParseKademliaID(test.key); err == nil {
+				t.Fatalf("expected malformed key %q to be rejected", test.key)
+			}
+		})
+	}
+}
+
 func TestIDLess(t *T) {
 	id1, _ := ParseKademliaID("FFFFFFFF00000000000000000000000000000000000000000000000000000000")
 	id2, _ := ParseKademliaID("1111111100000000000000000000000000000000000000000000000000000000")

@@ -33,6 +33,34 @@ func TestDataStorePutAndGet(t *testing.T) {
 
 }
 
+func TestDataStoreGetWithEquivalentKey(t *testing.T) {
+	ds := NewDataStore()
+
+	storedKey := contact.NewKademliaIDFromData([]byte("hello"))
+	lookupKey, err := contact.ParseKademliaID(storedKey.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if storedKey == lookupKey {
+		t.Fatal("expected stored and lookup keys to be distinct pointers")
+	}
+
+	expected := []byte("hello")
+	if err := ds.Put(storedKey, expected); err != nil {
+		t.Fatal(err)
+	}
+
+	actual, exists := ds.Get(lookupKey)
+	if !exists {
+		t.Fatal("expected equivalent key to retrieve stored value")
+	}
+
+	if !bytes.Equal(actual, expected) {
+		t.Fatalf("expected %q, got %q", expected, actual)
+	}
+}
+
 // TestDataStoreGetMissingKey verifies that requesting a key that has not been stored
 // reports that the key does not exist.
 func TestDataStoreGetMissingKey(t *testing.T) {

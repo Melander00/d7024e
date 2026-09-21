@@ -51,6 +51,13 @@ func NewKademliaIDFromAddress(address string) (*KademliaID, error) {
 	return &id, nil
 }
 
+// NewKademliaIDFromData returns the SHA-256 key for a stored value.
+func NewKademliaIDFromData(data []byte) *KademliaID {
+	sum := sha256.Sum256(data)
+	id := KademliaID(sum)
+	return &id
+}
+
 // NewRandomKademliaID returns a new instance of a cryptographically secure
 // random KademliaID.
 func NewRandomKademliaID() *KademliaID {

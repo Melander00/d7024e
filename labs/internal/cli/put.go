@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"crypto/sha256"
 	"d7024e/internal/kademlia"
 	"d7024e/internal/kademlia/contact"
 	"fmt"
@@ -49,9 +48,7 @@ func (cmd *putCmd) handle(args []string) {
 	data, err := os.ReadFile(path)
 	check(err)
 
-	hash := sha256.Sum256(data)
-
-	id := contact.KademliaID(hash)
+	id := contact.NewKademliaIDFromData(data)
 
 	fmt.Printf("  uploading %s with size %s and ID=%s\n", target, formatBytes(data), id.String())
 

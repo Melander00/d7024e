@@ -39,6 +39,16 @@ func (routingTable *RoutingTable) AddContact(contact Contact) {
 	bucket.AddContact(contact)
 }
 
+// Remove a contact from the corresponding Bucket.
+func (routingTable *RoutingTable) RemoveContact(contact Contact) {
+	routingTable.mu.Lock()
+	defer routingTable.mu.Unlock()
+
+	bucketIndex := routingTable.getBucketIndex(contact.ID)
+	bucket := routingTable.buckets[bucketIndex]
+	bucket.RemoveContact(contact)
+}
+
 // FindClosestContacts finds the count closest Contacts to the target in the RoutingTable
 func (routingTable *RoutingTable) FindClosestContacts(target *KademliaID, count int) []Contact {
 	routingTable.mu.RLock()

@@ -84,7 +84,7 @@ func (kademlia *Kademlia) lookup(target *contact.KademliaID, query lookupQuery) 
 
 		for pending < kademlia.Config.Alpha {
 
-			candidate, ok := getNextCandidate(&candidates, queried)
+			candidate, ok := getNextCandidate(&candidates, queried, kademlia.Config.K)
 
 			if !ok {
 				// We have reached the end
@@ -110,6 +110,7 @@ func (kademlia *Kademlia) lookup(target *contact.KademliaID, query lookupQuery) 
 		if result.err != nil {
 			// TODO: error handling
 			// If the error is timeout we can assume it is dead for example
+			kademlia.Routing.RemoveContact(result.contact)
 			continue
 		}
 
@@ -134,12 +135,15 @@ func (kademlia *Kademlia) lookup(target *contact.KademliaID, query lookupQuery) 
 	return candidates.GetContacts(candidates.Len()), nil, nil
 }
 
-func getNextCandidate(candidates *contact.ContactCandidates, queried map[string]bool) (contact.Contact, bool) {
+func getNextCandidate(candidates *contact.ContactCandidates, queried map[string]bool, k int) (contact.Contact, bool) {
 	contacts := candidates.GetContacts(candidates.Len())
 
-	for _, candidate := range contacts {
+	for i, candidate := range contacts {
 		if !queried[candidate.ID.String()] {
 			return candidate, true
+		}
+		if i >= k {
+			break
 		}
 	}
 

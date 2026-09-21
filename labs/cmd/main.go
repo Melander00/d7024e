@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"d7024e/internal/cli"
 	"d7024e/internal/kademlia"
 	"d7024e/internal/kademlia/contact"
@@ -58,6 +59,11 @@ func main() {
 	me := contact.NewContact(id, address)
 	rpc := rpc.CreateRpc(receiver, net, me)
 	node := kademlia.NewKademliaNode(config, rpc)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	node.StartBucketRefresh(ctx)
 
 	checkJoinNetwork(node)
 

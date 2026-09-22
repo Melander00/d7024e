@@ -10,7 +10,7 @@ import (
 // TestRPCPing verifies that one RPC node can send a PING request through the
 // simulated network and receive the corresponding PONG response.
 func TestRPCPing(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	receiverA := network.NewChannelNetworkReceiver(1)
 	receiverB := network.NewChannelNetworkReceiver(1)
@@ -62,7 +62,7 @@ func TestRPCPing(t *testing.T) {
 // through the simulated network and receive the contacts returned by the
 // destination node's FindNode handler.
 func TestRPCFindNode(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	receiverA := network.NewChannelNetworkReceiver(1)
 	receiverB := network.NewChannelNetworkReceiver(1)
@@ -127,7 +127,7 @@ func TestRPCFindNode(t *testing.T) {
 // through the simulated network and receive the value returned by the
 // destination node's FindValue handler.
 func TestRPCFindValue(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	receiverA := network.NewChannelNetworkReceiver(1)
 	receiverB := network.NewChannelNetworkReceiver(1)
@@ -188,7 +188,7 @@ func TestRPCFindValue(t *testing.T) {
 // the simulated network and receive a successful STORE response from the
 // destination node's Store handler.
 func TestRPCStore(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	receiverA := network.NewChannelNetworkReceiver(1)
 	receiverB := network.NewChannelNetworkReceiver(1)

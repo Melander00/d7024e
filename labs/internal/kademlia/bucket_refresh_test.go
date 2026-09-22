@@ -12,7 +12,7 @@ import (
 // TestJoinRefreshesBuckets verifies that Join causes the joining node to learn
 // about a node it never contacted directly, via the bootstrap's routing info.
 func TestJoinRefreshesBuckets(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	bootstrap := createTestNode(t, simulation, "127.0.0.1:11001")
 	joining := createTestNode(t, simulation, "127.0.0.1:11002")
@@ -39,7 +39,7 @@ func TestJoinRefreshesBuckets(t *testing.T) {
 // TestRefreshSkipsRecentlyUsedBucket verifies that a bucket which just served a
 // lookup is not reported as needing a refresh.
 func TestRefreshSkipsRecentlyUsedBucket(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 	node := createTestNode(t, simulation, "127.0.0.1:11004")
 
 	target := contact.NewRandomKademliaID()
@@ -58,7 +58,7 @@ func TestRefreshSkipsRecentlyUsedBucket(t *testing.T) {
 // TestStaleBucketNeedsRefresh verifies that a bucket which has never served a
 // lookup is reported as needing a refresh.
 func TestStaleBucketNeedsRefresh(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 	node := createTestNode(t, simulation, "127.0.0.1:11005")
 
 	target := contact.NewRandomKademliaID()
@@ -80,7 +80,7 @@ func TestStaleBucketNeedsRefresh(t *testing.T) {
 // TestBucketRefreshLoopRuns verifies that the background refresh loop actually
 // performs lookups that mark stale buckets as refreshed.
 func TestBucketRefreshLoopRuns(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 	node := createTestNode(t, simulation, "127.0.0.1:11006")
 	node.Config.BucketRefreshInterval = 10 * time.Millisecond
 

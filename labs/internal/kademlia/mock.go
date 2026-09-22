@@ -18,7 +18,7 @@ type Mock struct {
 func MockKademlia(nrNodes int) {
 	fmt.Printf("Mocking kademlia %d nodes\n", nrNodes)
 
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	config := KademliaConfig{
 		Alpha:   3,

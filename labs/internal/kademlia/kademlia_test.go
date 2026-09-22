@@ -44,7 +44,7 @@ func createTestNode(t *testing.T, simulation *network.Simulation, address string
 // TestKademliaJoinAndLookupContact verifies that after node B joins via bootstrap node A,
 // node B can locate node A via LookupContact.
 func TestKademliaJoinAndLookupContact(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	nodeA := createTestNode(t, simulation, "127.0.0.1:10001")
 	nodeB := createTestNode(t, simulation, "127.0.0.1:10002")
@@ -69,7 +69,7 @@ func TestKademliaJoinAndLookupContact(t *testing.T) {
 // TestKademliaLookupContactAcrossMultipleNodes tests iterative lookup across multiple hops:
 // node A joins B, node C joins B, and node A discovers node C via LookupContact.
 func TestKademliaLookupContactAcrossMultipleNodes(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	nodeA := createTestNode(t, simulation, "127.0.0.1:10001")
 	nodeB := createTestNode(t, simulation, "127.0.0.1:10002")
@@ -96,7 +96,7 @@ func TestKademliaLookupContactAcrossMultipleNodes(t *testing.T) {
 // TestKademliaLookupDataFound tests remote data retrieval when node A has stored data
 // and node B requests it via LookupData.
 func TestKademliaLookupDataFound(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	nodeA := createTestNode(t, simulation, "127.0.0.1:10001")
 	nodeB := createTestNode(t, simulation, "127.0.0.1:10002")
@@ -120,7 +120,7 @@ func TestKademliaLookupDataFound(t *testing.T) {
 // TestKademliaLookupDataMissing checks that LookupData returns nil/empty
 // when no node in the network possesses the requested key.
 func TestKademliaLookupDataMissing(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	nodeA := createTestNode(t, simulation, "127.0.0.1:10001")
 	nodeB := createTestNode(t, simulation, "127.0.0.1:10002")
@@ -139,7 +139,7 @@ func TestKademliaLookupDataMissing(t *testing.T) {
 // TestKademliaStoreAndLookupData tests the full Store and remote Lookup flow.
 
 func TestKademliaStoreAndLookupData(t *testing.T) {
-	simulation := network.NewSimulation()
+	simulation := network.NewSimulation(0, 0, 1)
 
 	nodeA := createTestNode(t, simulation, "127.0.0.1:10001")
 	nodeB := createTestNode(t, simulation, "127.0.0.1:10002")

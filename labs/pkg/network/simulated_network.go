@@ -2,7 +2,9 @@ package network
 
 import (
 	"errors"
+	"math/rand"
 	"sync"
+	"time"
 )
 
 type SimulatedNetwork struct {
@@ -12,13 +14,19 @@ type SimulatedNetwork struct {
 }
 
 type Simulation struct {
-	mu    sync.RWMutex
-	nodes map[string]*SimulatedNetwork
+	latency    float64
+	packetLoss float64
+	mu         sync.RWMutex
+	nodes      map[string]*SimulatedNetwork
+	rand       *rand.Rand
 }
 
-func NewSimulation() *Simulation {
+func NewSimulation(latency float64, packetLoss float64, randSeed int64) *Simulation {
 	return &Simulation{
-		nodes: make(map[string]*SimulatedNetwork),
+		nodes:      make(map[string]*SimulatedNetwork),
+		latency:    latency,
+		packetLoss: packetLoss,
+		rand:       rand.New(rand.NewSource(randSeed)),
 	}
 }
 
@@ -52,7 +60,28 @@ func (net *SimulatedNetwork) Send(to string, bytes []byte) error {
 		return errors.New("Target doesn't exist")
 	}
 
-	go dest.receiver.OnData(bytes) // goroutine so it simulates async behaviour.
+	go func() {
+		// First we sleep to simulate latency
+		net.simulation.mu.RLock()
+		latency := time.Duration(net.simulation.latency * float64(time.Millisecond))
+		net.simulation.mu.RUnlock()
+
+		time.Sleep(latency)
+
+		// Then we randomize if we should drop the packet
+		net.simulation.mu.Lock()
+		loss := net.simulation.rand.Float64()
+
+		pLoss := net.simulation.packetLoss
+		net.simulation.mu.Unlock()
+
+		if loss < pLoss {
+			// Drop packet
+			return
+		}
+
+		dest.receiver.OnData(bytes)
+	}()
 
 	return nil
 }

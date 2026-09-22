@@ -245,8 +245,17 @@ func (kademlia *Kademlia) findValueHandler(client contact.Contact, hash string) 
 
 func (kademlia *Kademlia) storeHandler(client contact.Contact, key string, value []byte) bool {
 	kademlia.Routing.AddContact(client)
-	// TODO: Implement
-	return false
+	target, err := contact.ParseKademliaID(key)
+	if err != nil {
+		return false
+	}
+
+	expected := contact.NewKademliaIDFromData(value)
+	if !target.Equals(expected) {
+		return false
+	}
+
+	return kademlia.Datastore.Put(target, value) == nil
 }
 
 func (kademlia *Kademlia) Join(boot contact.Contact) {

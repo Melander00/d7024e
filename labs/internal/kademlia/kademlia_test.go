@@ -161,3 +161,46 @@ func TestKademliaStoreAndLookupData(t *testing.T) {
 		t.Fatalf("expected stored data %q, got %q", data, result)
 	}
 }
+
+func TestStoreHandlerStoresValidData(t *testing.T) {
+	simulation := network.NewSimulation(0, 0, 1)
+	node := createTestNode(t, simulation, "127.0.0.1:10001")
+	data := []byte("hello")
+	key := contact.NewKademliaIDFromData(data)
+
+	if !node.storeHandler(node.Me, key.String(), data) {
+		t.Fatal("expected valid STORE request to succeed")
+	}
+
+	stored, exists := node.Datastore.Get(key)
+	if !exists {
+		t.Fatal("expected valid STORE request to persist data")
+	}
+	if !bytes.Equal(stored, data) {
+		t.Fatalf("expected stored data %q, got %q", data, stored)
+	}
+}
+
+func TestStoreHandlerRejectsMismatchedKey(t *testing.T) {
+	simulation := network.NewSimulation(0, 0, 1)
+	node := createTestNode(t, simulation, "127.0.0.1:10001")
+	data := []byte("hello")
+	key := contact.NewKademliaIDFromData([]byte("different"))
+
+	if node.storeHandler(node.Me, key.String(), data) {
+		t.Fatal("expected mismatched key to be rejected")
+	}
+
+	if _, exists := node.Datastore.Get(key); exists {
+		t.Fatal("expected mismatched STORE request not to persist data")
+	}
+}
+
+func TestStoreHandlerRejectsMalformedKey(t *testing.T) {
+	simulation := network.NewSimulation(0, 0, 1)
+	node := createTestNode(t, simulation, "127.0.0.1:10001")
+
+	if node.storeHandler(node.Me, "not-a-kademlia-id", []byte("hello")) {
+		t.Fatal("expected malformed key to be rejected")
+	}
+}

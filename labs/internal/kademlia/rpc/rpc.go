@@ -23,11 +23,11 @@ type RPC struct {
 }
 
 type Request struct {
-	// createdAt time.Time
-	channel chan Message
-	timeout time.Duration
-	retries int
-	handled bool
+	createdAt time.Time
+	channel   chan Message
+	timeout   time.Duration
+	retries   int
+	handled   bool
 }
 
 func CreateRpc(receiver network.NetworkReceiver, net network.Network, me contact.Contact) *RPC {
@@ -43,6 +43,7 @@ func CreateRpc(receiver network.NetworkReceiver, net network.Network, me contact
 
 	go receiver.Read(rpc.readChannel)
 	go rpc.Read()
+	go startGarbageCleaner(rpc, 5*time.Minute, 2*time.Minute)
 
 	return rpc
 }
@@ -208,10 +209,10 @@ func (rpc *RPC) createMessage(Type MessageType) Message {
 
 func (rpc *RPC) createRequest(requestID string) *Request {
 	req := &Request{
-		// createdAt: time.Now().Unix(),
-		channel: make(chan Message, 1),
-		timeout: rpc.timeout,
-		retries: rpc.retries,
+		createdAt: time.Now(),
+		channel:   make(chan Message, 1),
+		timeout:   rpc.timeout,
+		retries:   rpc.retries,
 	}
 
 	rpc.mu.Lock()

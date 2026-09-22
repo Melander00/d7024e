@@ -19,11 +19,12 @@ const (
 )
 
 type MessageValue struct {
-	Hash    string
-	Key     string
-	Value   []byte
-	Nodes   []contact.Contact
-	Success bool
+	Hash     string
+	Key      string
+	Value    []byte
+	Nodes    []contact.Contact
+	Success  bool
+	HasValue bool
 }
 
 type Message struct {
@@ -31,6 +32,7 @@ type Message struct {
 	RequestID string
 	Sender    contact.Contact
 	Value     MessageValue
+	Error     string
 }
 
 func FindNodeRequest(hash string) MessageValue {

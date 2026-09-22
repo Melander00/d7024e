@@ -224,23 +224,54 @@ func (kademlia *Kademlia) pingHandler(client contact.Contact) {
 	return // Ping shouldnt do anything.
 }
 
-func (kademlia *Kademlia) findNodeHandler(client contact.Contact, hash string) []contact.Contact {
-	kademlia.Routing.AddContact(client)
-	target, _ := contact.ParseKademliaID(hash) // TODO: error handling
+func (kademlia *Kademlia) findNodeHandler(
+	client contact.Contact,
+	hash string,
+) ([]contact.Contact, error) {
 
-	return kademlia.Routing.FindClosestContacts(target, kademlia.Config.K)
-}
+	target, err := contact.ParseKademliaID(hash)
 
-func (kademlia *Kademlia) findValueHandler(client contact.Contact, hash string) ([]contact.Contact, []byte, bool) {
-	kademlia.Routing.AddContact(client)
-	key, _ := contact.ParseKademliaID(hash) // TODO: error handling
-
-	data, has := kademlia.Datastore.Get(key)
-	if has {
-		return nil, data, true
+	if err != nil {
+		return nil, err
 	}
 
-	return kademlia.Routing.FindClosestContacts(key, kademlia.Config.K), nil, false
+	kademlia.Routing.AddContact(client)
+
+	contacts :=
+		kademlia.Routing.FindClosestContacts(
+			target,
+			kademlia.Config.K,
+		)
+
+	return contacts, nil
+}
+
+func (kademlia *Kademlia) findValueHandler(
+	client contact.Contact,
+	hash string,
+) ([]contact.Contact, []byte, bool, error) {
+
+	key, err := contact.ParseKademliaID(hash)
+
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	kademlia.Routing.AddContact(client)
+
+	data, has := kademlia.Datastore.Get(key)
+
+	if has {
+		return nil, data, true, nil
+	}
+
+	contacts :=
+		kademlia.Routing.FindClosestContacts(
+			key,
+			kademlia.Config.K,
+		)
+
+	return contacts, nil, false, nil
 }
 
 func (kademlia *Kademlia) storeHandler(client contact.Contact, key string, value []byte) bool {

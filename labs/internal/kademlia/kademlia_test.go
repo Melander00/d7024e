@@ -30,6 +30,10 @@ func createTestNode(t *testing.T, simulation *network.Simulation, address string
 
 	me := contact.NewContact(id, address)
 	rpcNode := rpc.CreateRpc(receiver, net, me)
+	rpcNode.SetDataNetwork(simulation.NewSimulatedDataNetwork())
+	if err := rpcNode.StartDataPlane(); err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+	}
 
 	config := KademliaConfig{
 		Alpha:   3,
@@ -104,7 +108,7 @@ func TestKademliaLookupDataFound(t *testing.T) {
 	nodeB.Join(nodeA.Me)
 
 	expectedData := []byte("hello")
-	key := contact.NewRandomKademliaID()
+	key := contact.NewKademliaIDFromData(expectedData)
 
 	if err := nodeA.Datastore.Put(key, expectedData); err != nil {
 		t.Fatal(err)

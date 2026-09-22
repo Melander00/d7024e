@@ -24,7 +24,7 @@ type KademliaConfig struct {
 	BucketRefreshInterval time.Duration
 }
 
-// defaultBucketRefreshInterval is used when a config leaves BucketRefreshInterval unset.
+// defaultBucketRefreshInterval is used when a config leaves BucketRefreshInterval unset. set to half an hour to guarantee periodic refresh of buckets of an hour
 const defaultBucketRefreshInterval = time.Hour
 
 func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
@@ -257,7 +257,7 @@ func (kademlia *Kademlia) Join(boot contact.Contact) {
 		kademlia.ID,
 		1,
 	)
-
+	// TODO: return error
 	if len(closest) == 0 {
 		return
 	}

@@ -17,16 +17,20 @@ type Simulation struct {
 	latency    float64
 	packetLoss float64
 	mu         sync.RWMutex
-	nodes      map[string]*SimulatedNetwork
-	rand       *rand.Rand
+
+	nodes        map[string]*SimulatedNetwork
+	dataHandlers map[string]DataHandler
+
+	rand *rand.Rand
 }
 
 func NewSimulation(latency float64, packetLoss float64, randSeed int64) *Simulation {
 	return &Simulation{
-		nodes:      make(map[string]*SimulatedNetwork),
-		latency:    latency,
-		packetLoss: packetLoss,
-		rand:       rand.New(rand.NewSource(randSeed)),
+		nodes:        make(map[string]*SimulatedNetwork),
+		dataHandlers: make(map[string]DataHandler),
+		latency:      latency,
+		packetLoss:   packetLoss,
+		rand:         rand.New(rand.NewSource(randSeed)),
 	}
 }
 

@@ -30,6 +30,10 @@ func createTestNode(t *testing.T, simulation *network.Simulation, address string
 
 	me := contact.NewContact(id, address)
 	rpcNode := rpc.CreateRpc(receiver, net, me)
+	rpcNode.SetDataNetwork(simulation.NewSimulatedDataNetwork())
+	if err := rpcNode.StartDataPlane(); err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+	}
 
 	config := KademliaConfig{
 		Alpha:   3,

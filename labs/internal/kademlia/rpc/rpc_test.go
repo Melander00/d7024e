@@ -96,8 +96,8 @@ func TestRPCFindNode(t *testing.T) {
 	rpcA := CreateRpc(receiverA, networkA, contactA)
 	rpcB := CreateRpc(receiverB, networkB, contactB)
 
-	rpcB.SetFindNodeHandler(func(client contact.Contact, hash string) []contact.Contact {
-		return []contact.Contact{contactA}
+	rpcB.SetFindNodeHandler(func(client contact.Contact, hash string) ([]contact.Contact, error) {
+		return []contact.Contact{contactA}, nil
 	})
 
 	response, err := rpcA.FindNode(
@@ -160,13 +160,21 @@ func TestRPCFindValue(t *testing.T) {
 
 	rpcA := CreateRpc(receiverA, networkA, contactA)
 	rpcB := CreateRpc(receiverB, networkB, contactB)
+	rpcA.SetDataNetwork(simulation.NewSimulatedDataNetwork())
+	rpcB.SetDataNetwork(simulation.NewSimulatedDataNetwork())
+	if err := rpcA.StartDataPlane(); err != nil {
+		t.Fatal(err)
+	}
+	if err := rpcB.StartDataPlane(); err != nil {
+		t.Fatal(err)
+	}
 
 	expected := []byte("hello")
-	target := contact.NewRandomKademliaID()
+	target := contact.NewKademliaIDFromData(expected)
 
 	rpcB.SetFindValueHandler(
-		func(client contact.Contact, hash string) ([]contact.Contact, []byte, bool) {
-			return nil, expected, true
+		func(client contact.Contact, hash string) ([]contact.Contact, []byte, bool, error) {
+			return nil, expected, true, nil
 		},
 	)
 
@@ -221,6 +229,14 @@ func TestRPCStore(t *testing.T) {
 
 	rpcA := CreateRpc(receiverA, networkA, contactA)
 	rpcB := CreateRpc(receiverB, networkB, contactB)
+	rpcA.SetDataNetwork(simulation.NewSimulatedDataNetwork())
+	rpcB.SetDataNetwork(simulation.NewSimulatedDataNetwork())
+	if err := rpcA.StartDataPlane(); err != nil {
+		t.Fatal(err)
+	}
+	if err := rpcB.StartDataPlane(); err != nil {
+		t.Fatal(err)
+	}
 
 	key := contact.NewRandomKademliaID().String()
 	value := []byte("hello")

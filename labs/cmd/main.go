@@ -53,11 +53,19 @@ func main() {
 
 	receiver := network.NewChannelNetworkReceiver(5)
 	net := network.NewUdpNetwork(receiver)
+	dataNet := network.NewTCPDataNetwork()
 	address := ip.String() + ":8080"
 	go net.Listen(":8080")
 	id, _ := contact.NewKademliaIDFromAddress(address)
 	me := contact.NewContact(id, address)
 	rpc := rpc.CreateRpc(receiver, net, me)
+
+	rpc.SetDataNetwork(dataNet)
+
+	if err := rpc.StartDataPlane(); err != nil {
+		log.Fatal(err)
+	}
+
 	node := kademlia.NewKademliaNode(config, rpc)
 
 	ctx, cancel := context.WithCancel(context.Background())

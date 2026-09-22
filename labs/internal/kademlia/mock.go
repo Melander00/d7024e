@@ -59,6 +59,10 @@ func (mock *Mock) createNode(i int, simulation *network.Simulation, config Kadem
 	id, _ := contact.NewKademliaIDFromAddress(address)
 	me := contact.NewContact(id, address)
 	rpc := rpc.CreateRpc(receiver, network, me)
+	rpc.SetDataNetwork(simulation.NewSimulatedDataNetwork())
+	if err := rpc.StartDataPlane(); err != nil {
+		panic(err)
+	}
 	node := NewKademliaNode(config, rpc)
 
 	mock.nodes = append(mock.nodes, node)

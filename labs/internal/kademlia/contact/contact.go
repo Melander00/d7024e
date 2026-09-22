@@ -41,10 +41,35 @@ type ContactCandidates struct {
 }
 
 // Append an array of Contacts to the ContactCandidates
+//
+//	func (candidates *ContactCandidates) Append(contacts []Contact) {
+//		// TODO: Deduplicating so that we dont store the same contact multiple times.
+//		// Use ID to remove duplicates.
+//		candidates.contacts = append(candidates.contacts, contacts...)
+//	}
+
+// Append an array of Contacts to the ContactCandidates with deduplicating.
 func (candidates *ContactCandidates) Append(contacts []Contact) {
-	// TODO: Deduplicating so that we dont store the same contact multiple times.
-	// Use ID to remove duplicates.
-	candidates.contacts = append(candidates.contacts, contacts...)
+	seen := make(map[KademliaID]struct{}, len(candidates.contacts)+len(contacts))
+
+	for _, contact := range candidates.contacts {
+		if contact.ID != nil {
+			seen[*contact.ID] = struct{}{}
+		}
+	}
+
+	for _, contact := range contacts {
+		if contact.ID == nil {
+			continue
+		}
+
+		if _, exists := seen[*contact.ID]; exists {
+			continue
+		}
+
+		seen[*contact.ID] = struct{}{}
+		candidates.contacts = append(candidates.contacts, contact)
+	}
 }
 
 // GetContacts returns the first count number of Contacts

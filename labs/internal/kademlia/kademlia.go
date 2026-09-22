@@ -4,6 +4,7 @@ import (
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/datastore"
 	"d7024e/internal/kademlia/rpc"
+	"fmt"
 	"time"
 )
 
@@ -198,10 +199,18 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 			}
 
 			if res.Value.Value != nil {
+				expectedKey := contact.NewKademliaIDFromData(res.Value.Value)
+				if expectedKey.Equals(target) {
+					return lookupResult{
+						contact: candidate,
+						value:   res.Value.Value,
+						found:   true,
+					}
+				}
+
 				return lookupResult{
 					contact: candidate,
-					value:   res.Value.Value,
-					found:   true,
+					err:     fmt.Errorf("kademlia: value for %s does not hash to the requested key", target.String()),
 				}
 			}
 
@@ -216,7 +225,35 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 }
 
 func (kademlia *Kademlia) Store(data []byte) {
-	// TODO
+	key := contact.NewKademliaIDFromData(data)
+	if err := kademlia.Datastore.Put(key, data); err != nil {
+		return
+	}
+
+	contacts, _, _ := kademlia.lookup(
+		key,
+		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
+			res, err := kademlia.Rpc.FindNode(candidate, target.String())
+			if err != nil {
+				return lookupResult{
+					contact: candidate,
+					err:     err,
+				}
+			}
+
+			return lookupResult{
+				contact:  candidate,
+				contacts: res.Value.Nodes,
+			}
+		},
+	)
+
+	for _, candidate := range contacts {
+		if candidate.Address == kademlia.Me.Address {
+			continue
+		}
+		_, _ = kademlia.Rpc.Store(candidate, key.String(), data)
+	}
 }
 
 func (kademlia *Kademlia) pingHandler(client contact.Contact) {

@@ -104,7 +104,7 @@ func TestKademliaLookupDataFound(t *testing.T) {
 	nodeB.Join(nodeA.Me)
 
 	expectedData := []byte("hello")
-	key := contact.NewRandomKademliaID()
+	key := contact.NewKademliaIDFromData(expectedData)
 
 	if err := nodeA.Datastore.Put(key, expectedData); err != nil {
 		t.Fatal(err)
@@ -159,6 +159,31 @@ func TestKademliaStoreAndLookupData(t *testing.T) {
 
 	if !bytes.Equal(result, data) {
 		t.Fatalf("expected stored data %q, got %q", data, result)
+	}
+}
+
+func TestKademliaLookupDataRejectsInvalidValue(t *testing.T) {
+	simulation := network.NewSimulation(0, 0, 1)
+
+	nodeA := createTestNode(t, simulation, "127.0.0.1:10001")
+	nodeB := createTestNode(t, simulation, "127.0.0.1:10002")
+
+	nodeB.Join(nodeA.Me)
+
+	requestedKey := contact.NewKademliaIDFromData([]byte("hello"))
+	invalidValue := []byte("not-the-real-value")
+
+	if err := nodeA.Datastore.Put(requestedKey, invalidValue); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := nodeB.LookupData(requestedKey.String())
+	if err != nil {
+		t.Fatalf("expected invalid value to be rejected silently during lookup, got %v", err)
+	}
+
+	if len(result) != 0 {
+		t.Fatalf("expected invalid data to be rejected, got %q", result)
 	}
 }
 

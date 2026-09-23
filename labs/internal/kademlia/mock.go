@@ -3,6 +3,7 @@ package kademlia
 import (
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/rpc"
+	"d7024e/pkg/logger"
 	"d7024e/pkg/network"
 	"fmt"
 	"strconv"
@@ -34,12 +35,18 @@ func MockKademlia(nrNodes int) *Mock {
 
 	boot_node := mock.CreateNode(0, simulation, config)
 
+	boot_node.Logger = logger.NewPrintLogger("boot")
+
 	for i := 1; i < nrNodes; i++ {
 		node := mock.CreateNode(i, simulation, config)
 		go node.Join(boot_node.Me)
 	}
 
-	// time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second)
+
+	boot_node.LookupContact(&contact.Contact{
+		ID: contact.NewRandomKademliaID(),
+	})
 
 	// nodes := boot_node.Routing.FindClosestContacts(boot_node.Me.ID, nrNodes)
 	// fmt.Printf("Boot has %d nodes in routing table\n", len(nodes))

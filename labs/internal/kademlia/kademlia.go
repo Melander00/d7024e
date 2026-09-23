@@ -4,7 +4,9 @@ import (
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/datastore"
 	"d7024e/internal/kademlia/rpc"
+	"d7024e/pkg/logger"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -15,6 +17,7 @@ type Kademlia struct {
 	Me        contact.Contact
 	Datastore *datastore.DataStore
 	Config    *KademliaConfig
+	Logger    logger.Logger
 }
 
 type KademliaConfig struct {
@@ -48,6 +51,7 @@ func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 		Routing:   routing,
 		Datastore: datastore.NewDataStore(),
 		Config:    &config,
+		Logger:    logger.NewEmptyLogger(),
 	}
 
 	rpc.SetPingHandler(kademlia.pingHandler)
@@ -157,12 +161,20 @@ func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Conta
 		kademlia.Routing.MarkLookup(target.ID)
 	}
 
+	kademlia.Logger.Log("lookup_contact_start " + target.ID.String() + "\n")
+	defer kademlia.Logger.Log("lookup_contact_end" + "\n")
+
+	i := 0
+
 	contacts, _, _ := kademlia.lookup(
 		target.ID,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
+			i++
+			kademlia.Logger.Log("lookup_contact_rpc " + strconv.Itoa(i) + " " + candidate.ID.String() + "\n")
 			res, err := kademlia.Rpc.FindNode(candidate, target.String())
 
 			if err != nil {
+				kademlia.Logger.Log("lookup_contact_rpc_error " + strconv.Itoa(i) + " " + err.Error() + "\n")
 				return lookupResult{
 					contact: candidate,
 					err:     err,
@@ -186,12 +198,20 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 		return nil, err
 	}
 
+	kademlia.Logger.Log("lookup_data_start " + hash + "\n")
+	defer kademlia.Logger.Log("lookup_data_end" + "\n")
+
+	i := 0
+
 	_, value, err := kademlia.lookup(
 		target,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
+			i++
+			kademlia.Logger.Log("lookup_data_rpc " + strconv.Itoa(i) + " " + candidate.ID.String() + "\n")
 			res, err := kademlia.Rpc.FindValue(candidate, target.String())
 
 			if err != nil {
+				kademlia.Logger.Log("lookup_data_rpc_error " + strconv.Itoa(i) + " " + err.Error() + "\n")
 				return lookupResult{
 					contact: candidate,
 					err:     err,
@@ -201,6 +221,7 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 			if res.Value.Value != nil {
 				expectedKey := contact.NewKademliaIDFromData(res.Value.Value)
 				if expectedKey.Equals(target) {
+					kademlia.Logger.Log("lookup_data_rpc_value " + strconv.Itoa(i) + " " + strconv.Itoa(len(res.Value.Value)) + "\n")
 					return lookupResult{
 						contact: candidate,
 						value:   res.Value.Value,
@@ -230,6 +251,7 @@ func (kademlia *Kademlia) Store(data []byte) {
 		return
 	}
 
+	// TODO: Kan bytas ut mot LookupContact?
 	contacts, _, _ := kademlia.lookup(
 		key,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {

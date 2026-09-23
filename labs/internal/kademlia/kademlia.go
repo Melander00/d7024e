@@ -7,6 +7,7 @@ import (
 	"d7024e/pkg/logger"
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -165,16 +166,20 @@ func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Conta
 	defer kademlia.Logger.Log("lookup_contact_end" + "\n")
 
 	i := 0
+	mut := &sync.Mutex{}
 
 	contacts, _, _ := kademlia.lookup(
 		target.ID,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
+			mut.Lock()
 			i++
-			kademlia.Logger.Log("lookup_contact_rpc " + strconv.Itoa(i) + " " + candidate.ID.String() + "\n")
+			reqI := i
+			mut.Unlock()
+			kademlia.Logger.Log("lookup_contact_rpc " + strconv.Itoa(reqI) + " " + candidate.ID.String() + "\n")
 			res, err := kademlia.Rpc.FindNode(candidate, target.String())
 
 			if err != nil {
-				kademlia.Logger.Log("lookup_contact_rpc_error " + strconv.Itoa(i) + " " + err.Error() + "\n")
+				kademlia.Logger.Log("lookup_contact_rpc_error " + strconv.Itoa(reqI) + " " + err.Error() + "\n")
 				return lookupResult{
 					contact: candidate,
 					err:     err,
@@ -202,16 +207,20 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 	defer kademlia.Logger.Log("lookup_data_end" + "\n")
 
 	i := 0
+	mut := &sync.Mutex{}
 
 	_, value, err := kademlia.lookup(
 		target,
 		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
+			mut.Lock()
 			i++
-			kademlia.Logger.Log("lookup_data_rpc " + strconv.Itoa(i) + " " + candidate.ID.String() + "\n")
+			reqI := i
+			mut.Unlock()
+			kademlia.Logger.Log("lookup_data_rpc " + strconv.Itoa(reqI) + " " + candidate.ID.String() + "\n")
 			res, err := kademlia.Rpc.FindValue(candidate, target.String())
 
 			if err != nil {
-				kademlia.Logger.Log("lookup_data_rpc_error " + strconv.Itoa(i) + " " + err.Error() + "\n")
+				kademlia.Logger.Log("lookup_data_rpc_error " + strconv.Itoa(reqI) + " " + err.Error() + "\n")
 				return lookupResult{
 					contact: candidate,
 					err:     err,
@@ -221,7 +230,7 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 			if res.Value.Value != nil {
 				expectedKey := contact.NewKademliaIDFromData(res.Value.Value)
 				if expectedKey.Equals(target) {
-					kademlia.Logger.Log("lookup_data_rpc_value " + strconv.Itoa(i) + " " + strconv.Itoa(len(res.Value.Value)) + "\n")
+					kademlia.Logger.Log("lookup_data_rpc_value " + strconv.Itoa(reqI) + " " + strconv.Itoa(len(res.Value.Value)) + "\n")
 					return lookupResult{
 						contact: candidate,
 						value:   res.Value.Value,

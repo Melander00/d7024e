@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"d7024e/internal/kademlia"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,12 +14,16 @@ Prints the node it was received from if successful.
 
 */
 
+type getLookup interface {
+	LookupData(hash string) ([]byte, error)
+}
+
 type getCmd struct {
-	node *kademlia.Kademlia
+	node getLookup
 	name string
 }
 
-func CLIGet(node *kademlia.Kademlia) *getCmd {
+func CLIGet(node getLookup) *getCmd {
 	return &getCmd{
 		node: node,
 		name: "get",
@@ -47,7 +50,10 @@ func (cmd *getCmd) handle(args []string) {
 
 		filename := args[2]
 		path := filepath.Join(filename)
-		os.WriteFile(path, data, 0644)
+		if err := os.WriteFile(path, data, 0644); err != nil {
+			fmt.Println(err)
+			return
+		}
 
 	} else {
 		fmt.Printf("  DATA: %s\n", string(data))

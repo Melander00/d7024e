@@ -10,12 +10,12 @@ import (
 )
 
 type Mock struct {
-	simulation *network.Simulation
-	config     KademliaConfig
-	nodes      []*Kademlia
+	Simulation *network.Simulation
+	Config     KademliaConfig
+	Nodes      []*Kademlia
 }
 
-func MockKademlia(nrNodes int) {
+func MockKademlia(nrNodes int) *Mock {
 	fmt.Printf("Mocking kademlia %d nodes\n", nrNodes)
 
 	simulation := network.NewSimulation(0, 0, 1)
@@ -28,30 +28,32 @@ func MockKademlia(nrNodes int) {
 	}
 
 	mock := &Mock{
-		simulation: simulation,
-		config:     config,
+		Simulation: simulation,
+		Config:     config,
 	}
 
-	boot_node := mock.createNode(0, simulation, config)
+	boot_node := mock.CreateNode(0, simulation, config)
 
 	for i := 1; i < nrNodes; i++ {
-		node := mock.createNode(i, simulation, config)
+		node := mock.CreateNode(i, simulation, config)
 		go node.Join(boot_node.Me)
 	}
 
-	time.Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 
-	nodes := boot_node.Routing.FindClosestContacts(boot_node.Me.ID, nrNodes)
-	fmt.Printf("Boot has %d nodes in routing table\n", len(nodes))
-	nodes = mock.nodes[1].Routing.FindClosestContacts(boot_node.Me.ID, nrNodes)
-	fmt.Printf("Node-10001 has %d nodes\n", len(nodes))
-	for _, node := range nodes {
+	// nodes := boot_node.Routing.FindClosestContacts(boot_node.Me.ID, nrNodes)
+	// fmt.Printf("Boot has %d nodes in routing table\n", len(nodes))
+	// nodes = mock.Nodes[1].Routing.FindClosestContacts(boot_node.Me.ID, nrNodes)
+	// fmt.Printf("Node-10001 has %d nodes\n", len(nodes))
+	// for _, node := range nodes {
 
-		fmt.Printf("\t%s %s \n", node.Address, node.ID)
-	}
+	// 	fmt.Printf("\t%s %s \n", node.Address, node.ID)
+	// }
+
+	return mock
 }
 
-func (mock *Mock) createNode(i int, simulation *network.Simulation, config KademliaConfig) *Kademlia {
+func (mock *Mock) CreateNode(i int, simulation *network.Simulation, config KademliaConfig) *Kademlia {
 	receiver := network.NewChannelNetworkReceiver(5)
 	network := simulation.NewSimulatedNetwork(receiver)
 	address := "127.0.0.1" + ":" + strconv.Itoa(10000+i)
@@ -65,9 +67,9 @@ func (mock *Mock) createNode(i int, simulation *network.Simulation, config Kadem
 	}
 	node := NewKademliaNode(config, rpc)
 
-	mock.nodes = append(mock.nodes, node)
+	mock.Nodes = append(mock.Nodes, node)
 
-	fmt.Printf("Node %s with address: %s created\n", address, id.String())
+	// fmt.Printf("Node %s with address: %s created\n", address, id.String())
 
 	return node
 }

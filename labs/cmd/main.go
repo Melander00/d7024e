@@ -8,10 +8,8 @@ import (
 	"d7024e/internal/kademlia"
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/rpc"
-	"d7024e/pkg/build"
 	"d7024e/pkg/network"
 	"errors"
-	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -19,24 +17,17 @@ import (
 	"time"
 )
 
-var (
-	BuildVersion string = ""
-	BuildTime    string = ""
-)
-
 func main() {
-	build.BuildVersion = BuildVersion
-	build.BuildTime = BuildTime
 
-	mockPtr := flag.Bool("mock", false, "to mock the network")
+	// mockPtr := flag.Bool("mock", false, "to mock the network")
 
-	flag.Parse()
+	// flag.Parse()
 
-	if *mockPtr {
-		// Start Mockup
-		kademlia.MockKademlia(5000)
-		return
-	}
+	// if *mockPtr {
+	// 	// Start Mockup
+	// 	kademlia.MockKademlia(5000)
+	// 	return
+	// }
 
 	config := kademlia.KademliaConfig{
 		Alpha:   3,

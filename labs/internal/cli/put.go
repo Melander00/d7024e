@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"d7024e/internal/kademlia"
 	"d7024e/internal/kademlia/contact"
 	"fmt"
 	"math"
@@ -17,21 +16,19 @@ Prints the key of the value.
 
 */
 
+type dataStorer interface {
+	Store(data []byte)
+}
+
 type putCmd struct {
-	node *kademlia.Kademlia
+	node dataStorer
 	name string
 }
 
-func CLIPut(node *kademlia.Kademlia) *putCmd {
+func CLIPut(node dataStorer) *putCmd {
 	return &putCmd{
 		node: node,
 		name: "put",
-	}
-}
-
-func check(e error) {
-	if e != nil {
-		panic(e)
 	}
 }
 
@@ -46,7 +43,10 @@ func (cmd *putCmd) handle(args []string) {
 	path := filepath.Join(target)
 
 	data, err := os.ReadFile(path)
-	check(err)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	id := contact.NewKademliaIDFromData(data)
 

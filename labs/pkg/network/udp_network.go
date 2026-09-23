@@ -19,12 +19,15 @@ func NewUdpNetwork(receiver NetworkReceiver) *UdpNetwork {
 func (n *UdpNetwork) Listen(address string) error {
 	n.Address = address
 
-	addr, _ := net.ResolveUDPAddr("udp", address)
+	addr, err := net.ResolveUDPAddr("udp", address)
+
+	if err != nil {
+		return err
+	}
 
 	conn, err := net.ListenUDP("udp", addr)
 
 	if err != nil {
-		// TODO
 		return err
 	}
 
@@ -38,13 +41,11 @@ func (n *UdpNetwork) Listen(address string) error {
 func (n *UdpNetwork) Send(to string, bytes []byte) error {
 	addr, err := net.ResolveUDPAddr("udp", to)
 	if err != nil {
-		// TODO
 		return err
 	}
 
 	_, writeErr := n.conn.WriteToUDP(bytes, addr)
 	if writeErr != nil {
-		// TODO
 		return writeErr
 	}
 
@@ -52,14 +53,13 @@ func (n *UdpNetwork) Send(to string, bytes []byte) error {
 }
 
 func (n *UdpNetwork) receive() {
-	buf := make([]byte, 2048)
+	buf := make([]byte, 4096)
 	defer n.conn.Close()
 	for {
 		nr, _, err := n.conn.ReadFromUDP(buf)
 
 		if err != nil {
-			// TODO
-			continue
+			return
 		}
 
 		// Copy so the buffer doesnt get overwritten due to race condition.

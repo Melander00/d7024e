@@ -6,7 +6,6 @@ import (
 	"d7024e/internal/kademlia/rpc"
 	"d7024e/pkg/logger"
 	"fmt"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -162,8 +161,8 @@ func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Conta
 		kademlia.Routing.MarkLookup(target.ID)
 	}
 
-	kademlia.Logger.Log("lookup_contact_start " + target.ID.String() + "\n")
-	defer kademlia.Logger.Log("lookup_contact_end" + "\n")
+	kademlia.Logger.Log(fmt.Sprintf("%s lookup_contact_start %s\n", kademlia.Me.Address, target.ID.String()))
+	defer kademlia.Logger.Log(fmt.Sprintf("%s lookup_contact_end\n", kademlia.Me.Address))
 
 	i := 0
 	mut := &sync.Mutex{}
@@ -175,11 +174,11 @@ func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Conta
 			i++
 			reqI := i
 			mut.Unlock()
-			kademlia.Logger.Log("lookup_contact_rpc " + strconv.Itoa(reqI) + " " + candidate.ID.String() + "\n")
+			kademlia.Logger.Log(fmt.Sprintf("%s lookup_contact_rpc %d %s\n", kademlia.Me.Address, reqI, candidate.ID.String()))
 			res, err := kademlia.Rpc.FindNode(candidate, target.String())
 
 			if err != nil {
-				kademlia.Logger.Log("lookup_contact_rpc_error " + strconv.Itoa(reqI) + " " + err.Error() + "\n")
+				kademlia.Logger.Log(fmt.Sprintf("%s lookup_contact_rpc_error %d %s\n", kademlia.Me.Address, reqI, err.Error()))
 				return lookupResult{
 					contact: candidate,
 					err:     err,
@@ -203,8 +202,8 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 		return nil, err
 	}
 
-	kademlia.Logger.Log("lookup_data_start " + hash + "\n")
-	defer kademlia.Logger.Log("lookup_data_end" + "\n")
+	kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_start %s\n", kademlia.Me.Address, hash))
+	defer kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_end\n", kademlia.Me.Address))
 
 	i := 0
 	mut := &sync.Mutex{}
@@ -216,11 +215,11 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 			i++
 			reqI := i
 			mut.Unlock()
-			kademlia.Logger.Log("lookup_data_rpc " + strconv.Itoa(reqI) + " " + candidate.ID.String() + "\n")
+			kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_rpc %d %s\n", kademlia.Me.Address, reqI, candidate.ID.String()))
 			res, err := kademlia.Rpc.FindValue(candidate, target.String())
 
 			if err != nil {
-				kademlia.Logger.Log("lookup_data_rpc_error " + strconv.Itoa(reqI) + " " + err.Error() + "\n")
+				kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_rpc_error %d %s\n", kademlia.Me.Address, reqI, err.Error()))
 				return lookupResult{
 					contact: candidate,
 					err:     err,
@@ -230,7 +229,7 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 			if res.Value.Value != nil {
 				expectedKey := contact.NewKademliaIDFromData(res.Value.Value)
 				if expectedKey.Equals(target) {
-					kademlia.Logger.Log("lookup_data_rpc_value " + strconv.Itoa(reqI) + " " + strconv.Itoa(len(res.Value.Value)) + "\n")
+					kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_rpc_value %d %d\n", kademlia.Me.Address, reqI, len(res.Value.Value)))
 					return lookupResult{
 						contact: candidate,
 						value:   res.Value.Value,

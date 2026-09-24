@@ -73,15 +73,12 @@ func TestShowCmdHandleRoutingTable(t *T) {
 		Retries: 5,
 	}
 
-	mock := &kademlia.Mock{
-		Simulation: simulation,
-		Config:     config,
-	}
+	mock := kademlia.NewKademliaMock(t, simulation, config)
 
-	bootNode := mock.CreateNode(0, simulation, config)
+	bootNode := mock.CreateNode(t, 0, simulation, config)
 
 	for i := 1; i < 3; i++ {
-		node := mock.CreateNode(i, simulation, config)
+		node := mock.CreateNode(t, i, simulation, config)
 
 		go node.Join(bootNode.Me)
 	}
@@ -167,5 +164,5 @@ func createTestNode(t *T) *kademlia.Kademlia {
 		Config:     config,
 	}
 
-	return mock.CreateNode(0, simulation, config)
+	return mock.CreateNode(t, 0, simulation, config)
 }

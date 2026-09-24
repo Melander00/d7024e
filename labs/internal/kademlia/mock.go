@@ -5,10 +5,12 @@ import (
 	"d7024e/internal/kademlia/rpc"
 	"d7024e/pkg/logger"
 	"d7024e/pkg/network"
-	"fmt"
 	"strconv"
+	"testing"
 	"time"
 )
+
+type T = testing.T
 
 type Mock struct {
 	Simulation *network.Simulation
@@ -16,8 +18,20 @@ type Mock struct {
 	Nodes      []*Kademlia
 }
 
-func MockKademlia(nrNodes int) *Mock {
-	fmt.Printf("Mocking kademlia %d nodes\n", nrNodes)
+func NewKademliaMock(t *T, sim *network.Simulation, config KademliaConfig) *Mock {
+	t.Helper()
+
+	return &Mock{
+		Simulation: sim,
+		Config:     config,
+	}
+
+}
+
+func MockKademlia(t *T, nrNodes int) *Mock {
+	t.Helper()
+
+	// fmt.Printf("Mocking kademlia %d nodes\n", nrNodes)
 
 	simulation := network.NewSimulation(0, 0, 1)
 
@@ -33,20 +47,20 @@ func MockKademlia(nrNodes int) *Mock {
 		Config:     config,
 	}
 
-	boot_node := mock.CreateNode(0, simulation, config)
+	boot_node := mock.CreateNode(t, 0, simulation, config)
 
 	boot_node.Logger = logger.NewPrintLogger("boot")
 
 	for i := 1; i < nrNodes; i++ {
-		node := mock.CreateNode(i, simulation, config)
+		node := mock.CreateNode(t, i, simulation, config)
 		go node.Join(boot_node.Me)
 	}
 
-	time.Sleep(1 * time.Second)
+	// time.Sleep(1 * time.Second)
 
-	boot_node.LookupContact(&contact.Contact{
-		ID: contact.NewRandomKademliaID(),
-	})
+	// boot_node.LookupContact(&contact.Contact{
+	// 	ID: contact.NewRandomKademliaID(),
+	// })
 
 	// nodes := boot_node.Routing.FindClosestContacts(boot_node.Me.ID, nrNodes)
 	// fmt.Printf("Boot has %d nodes in routing table\n", len(nodes))
@@ -60,7 +74,9 @@ func MockKademlia(nrNodes int) *Mock {
 	return mock
 }
 
-func (mock *Mock) CreateNode(i int, simulation *network.Simulation, config KademliaConfig) *Kademlia {
+func (mock *Mock) CreateNode(t *T, i int, simulation *network.Simulation, config KademliaConfig) *Kademlia {
+	t.Helper()
+
 	receiver := network.NewChannelNetworkReceiver(5)
 	network := simulation.NewSimulatedNetwork(receiver)
 	address := "127.0.0.1" + ":" + strconv.Itoa(10000+i)

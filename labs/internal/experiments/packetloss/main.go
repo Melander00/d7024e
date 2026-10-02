@@ -11,15 +11,16 @@ import (
 	"fmt"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 )
 
 const (
-	networkSize = 10
-	lookups     = 10
+	networkSize = 25
+	lookups     = 100
 )
 
-var packetLossProbabilities = []float64{0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5}
+var packetLossProbabilities = []float64{0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5}
 var experimentSeeds = []int64{1, 2, 3, 4, 5}
 
 type experiment struct {
@@ -50,7 +51,7 @@ func runExperiment(nrNodes int, packetLoss float64, seed int64, nrLookups int, l
 	config := kademlia.KademliaConfig{
 		Alpha:                 3,
 		K:                     10,
-		Timeout:               100 * time.Millisecond,
+		Timeout:               1 * time.Second,
 		Retries:               3,
 		BucketRefreshInterval: time.Hour,
 	}
@@ -67,18 +68,31 @@ func runExperiment(nrNodes int, packetLoss float64, seed int64, nrLookups int, l
 	}
 
 	for i := 1; i < nrNodes; i++ {
-		exp.nodes[i].Join(exp.nodes[0].Me)
+		go exp.nodes[i].Join(exp.nodes[0].Me)
 	}
+
+	time.Sleep(300 * time.Millisecond)
+	fmt.Println("All nodes joined.")
 
 	values := make([][]byte, nrLookups)
 	keys := make([]*contact.KademliaID, nrLookups)
+
+	var stores sync.WaitGroup
+
 	for i := range values {
 		values[i] = randomValue(random)
 		keys[i] = contact.NewKademliaIDFromData(values[i])
-		if err := exp.nodes[0].Datastore.Put(keys[i], values[i]); err != nil {
-			panic(err)
-		}
+
+		stores.Add(1)
+		go func(value []byte) {
+			defer stores.Done()
+			exp.nodes[0].Store(value)
+		}(values[i])
 	}
+
+	stores.Wait()
+
+	fmt.Println("All values stored.")
 
 	for _, node := range exp.nodes {
 		node.Logger = log

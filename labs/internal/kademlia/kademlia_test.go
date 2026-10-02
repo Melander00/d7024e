@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -68,6 +70,46 @@ func TestKademliaJoinAndLookupContact(t *testing.T) {
 	if !found {
 		t.Fatalf("expected node A (%s) in lookup results, got %v", nodeA.Me.ID.String(), results)
 	}
+}
+
+func TestKademliaLookupContactWith1000Nodes(t *testing.T) {
+	const nodeCount = 1000
+
+	simulation := network.NewSimulation(0, 0, 1)
+	boot := createTestNode(t, simulation, "127.0.0.1:20000")
+	nodes := make([]*Kademlia, nodeCount)
+	nodes[0] = boot
+
+	for i := 1; i < nodeCount; i++ {
+		nodes[i] = createTestNode(t, simulation, fmt.Sprintf("127.0.0.1:%d", 20000+i))
+	}
+
+	const joinBatchSize = 16
+	for start := 1; start < nodeCount; start += joinBatchSize {
+		end := start + joinBatchSize
+		if end > nodeCount {
+			end = nodeCount
+		}
+
+		var joins sync.WaitGroup
+		for _, node := range nodes[start:end] {
+			joins.Add(1)
+			go func(node *Kademlia) {
+				defer joins.Done()
+				node.Join(boot.Me)
+			}(node)
+		}
+		joins.Wait()
+	}
+
+	results := nodes[nodeCount-1].LookupContact(&boot.Me)
+	for _, result := range results {
+		if result.ID.Equals(boot.Me.ID) {
+			return
+		}
+	}
+
+	t.Fatalf("expected node lookup to find bootstrap node %s, got %v", boot.Me.ID.String(), results)
 }
 
 // TestKademliaLookupContactAcrossMultipleNodes tests iterative lookup across multiple hops:

@@ -43,6 +43,7 @@ func (bucket *bucket) AddContact(contact Contact) {
 		if bucket.list.Len() < bucket.size {
 			bucket.list.PushFront(contact)
 		}
+		// if bucket full time to PING else ta bort
 	} else {
 		bucket.list.MoveToFront(element)
 	}

@@ -449,7 +449,7 @@ def plot_probes_vs_nodes(summary, output_file):
         label=r"Reference: $\lceil\log_2(N)\rceil$",
     )
 
-    plt.xscale("log", base=2)
+    # plt.xscale("log", base=2)
 
     plt.xlabel("Network size N (nodes)")
     plt.ylabel("Number of lookup probes")

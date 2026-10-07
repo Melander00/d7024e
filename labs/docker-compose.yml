@@ -34,10 +34,19 @@
 name: "kadlab"
 
 services:
+  dns:
+    build: ../dns/
+    stdin_open: true
+    tty: true
+    networks:
+      - kademlia
+  
   bootstrap:
     build: .
     stdin_open: true
     tty: true
+    environment:
+      DNS: "dns:3000"
     networks:
       - kademlia
     volumes:
@@ -48,6 +57,7 @@ services:
     stdin_open: true
     tty: true
     environment:
+      DNS: "dns:3000"
       BOOTSTRAP: "bootstrap:8080"
     depends_on:
       - bootstrap
@@ -57,6 +67,8 @@ services:
       - ./data:/app/data
     # deploy:
     #   replicas: 49
+
+  
 
 networks:
   kademlia:

@@ -8,6 +8,7 @@ import (
 	"d7024e/internal/kademlia"
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/rpc"
+	"d7024e/pkg/dns"
 	"d7024e/pkg/network"
 	"errors"
 	"fmt"
@@ -59,6 +60,12 @@ func main() {
 	}
 
 	node := kademlia.NewKademliaNode(config, rpc)
+
+	node.DNS = dns.NewRealDNS(os.Getenv("DNS"))
+	err = node.DNS.ClaimDomain(os.Getenv("DOMAIN"), node.Signature.GetPublicKey())
+	if err != nil {
+		fmt.Printf("DNS Error %s", err)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

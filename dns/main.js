@@ -11,6 +11,9 @@ app.listen(3000, () => {
     console.log("Started DNS")
 })
 
+app.get("/", (req, res) => {
+    res.send("Alive")
+})
 
 app.get("/pk/:domain", (req, res) => {
     const domain = req.params.domain
@@ -40,6 +43,8 @@ app.post("/claim", (req, res) => {
         res.status(401).send("Domain already claimed.")
         return;
     }
+
+    console.log("Registered", domain, "with", pk)
 
     res.send("Ok")
 })

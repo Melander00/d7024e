@@ -1,36 +1,3 @@
-# See https://docs.docker.com/compose/compose-file/ for information about what
-# commands you can use in this file.
-#
-# Note that you must use the `docker stack deploy` command, with any required
-# command line flags, in order to actually get any replicas started. That
-# command requires that a docker swarm is already running in order to function.
-
-# version: "3"
-# services:
-#   kademliaNodes:
-#     image: kadlab:latest # Make sure your Docker image has this name.
-#     stdin_open: true
-#     tty: true
-#     deploy:
-#       mode: replicated
-#       replicas: 5  
-# #        resources:
-# #           limits:
-# #              cpus: "0.1"
-# #              memory: 50M
-#       restart_policy:
-#         condition: on-failure
-#         delay: 5s
-#         max_attempts: 3
-#         window: 10s
-# #    ports:
-# #      - "4000:80"
-#     networks:
-#       - kademlia_network
-      
-# networks:
-#   kademlia_network:
-
 name: "kadlab"
 
 services:
@@ -38,6 +5,18 @@ services:
     build: ../dns/
     stdin_open: true
     tty: true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3000/', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 1s
     networks:
       - kademlia
   
@@ -45,8 +24,12 @@ services:
     build: .
     stdin_open: true
     tty: true
+    depends_on:
+      dns:
+        condition: service_healthy
     environment:
       DNS: "dns:3000"
+      DOMAIN: "boot.se"
     networks:
       - kademlia
     volumes:
@@ -59,6 +42,12 @@ services:
     environment:
       DNS: "dns:3000"
       BOOTSTRAP: "bootstrap:8080"
+    command: >
+      sh -c '
+        DOMAIN="$${HOSTNAME}.com";
+        export DOMAIN;
+        exec /app/kademlia-bin
+      '
     depends_on:
       - bootstrap
     networks:

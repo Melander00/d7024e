@@ -30,10 +30,11 @@ func main() {
 	// }
 
 	config := kademlia.KademliaConfig{
-		Alpha:   3,
-		K:       10,
-		Timeout: 5 * time.Second,
-		Retries: 5,
+		Alpha:               3,
+		K:                   10,
+		Timeout:             5 * time.Second,
+		Retries:             5,
+		ReplicationInterval: 10 * time.Minute,
 	}
 
 	ip, err := localIP()
@@ -63,6 +64,7 @@ func main() {
 	defer cancel()
 
 	node.StartBucketRefresh(ctx)
+	node.StartReplication(ctx)
 
 	checkJoinNetwork(node)
 

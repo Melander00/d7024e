@@ -259,24 +259,7 @@ func (kademlia *Kademlia) Store(data []byte) {
 		return
 	}
 
-	// TODO: Kan bytas ut mot LookupContact?
-	contacts, _, _ := kademlia.lookup(
-		key,
-		func(candidate contact.Contact, target *contact.KademliaID) lookupResult {
-			res, err := kademlia.Rpc.FindNode(candidate, target.String())
-			if err != nil {
-				return lookupResult{
-					contact: candidate,
-					err:     err,
-				}
-			}
-
-			return lookupResult{
-				contact:  candidate,
-				contacts: res.Value.Nodes,
-			}
-		},
-	)
+	contacts := kademlia.LookupContact(&contact.Contact{ID: key})
 
 	for _, candidate := range contacts {
 		if candidate.Address == kademlia.Me.Address {

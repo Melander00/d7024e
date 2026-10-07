@@ -10,6 +10,8 @@ type Signature interface {
 
 	VerifyVersionRecord(rec VersionRecord, pk c.PublicKey) bool
 	VerifyLatestRecord(rec LatestPointer, pk c.PublicKey) bool
+
+	GetPublicKey() c.PublicKey
 }
 
 type ED25519 struct {
@@ -29,6 +31,10 @@ func NewEd25519Sign() (*ED25519, error) {
 		sk: sk,
 		Pk: pk,
 	}, nil
+}
+
+func (ed *ED25519) GetPublicKey() c.PublicKey {
+	return ed.Pk
 }
 
 // Sign records

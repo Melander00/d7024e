@@ -3,6 +3,7 @@ package cli
 import (
 	"d7024e/internal/kademlia"
 	"d7024e/internal/kademlia/contact"
+	"encoding/base64"
 	"fmt"
 )
 
@@ -65,6 +66,22 @@ func (cmd *showCmd) handle(args []string) {
 		for _, k := range keys {
 			fmt.Printf("  %s\n", truncateId(*k))
 		}
+
+	} else if sub == "dns" {
+		if len(args) == 2 {
+			fmt.Println(cmd.getHelp())
+			return
+		}
+		domain := args[2]
+		pk, err := cmd.node.DNS.LookupPK(domain)
+
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+
+		fmt.Printf("\t%s => %s\n", domain, base64.URLEncoding.EncodeToString(pk))
+
 	} else {
 		fmt.Println(cmd.getHelp())
 	}
@@ -75,7 +92,7 @@ func (cmd *showCmd) getName() string {
 }
 
 func (cmd *showCmd) getHelp() string {
-	return `show <rt|ds> - prints either routing table or keys in data store`
+	return `show <rt|ds|dns> [dns->domain] - prints either routing table or keys in data store`
 }
 
 func truncateId(id contact.KademliaID) string {

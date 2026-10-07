@@ -3,6 +3,7 @@ package kademlia
 import (
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/rpc"
+	"d7024e/pkg/dns"
 	"d7024e/pkg/logger"
 	"d7024e/pkg/network"
 	"strconv"
@@ -47,12 +48,17 @@ func MockKademlia(t *T, nrNodes int) *Mock {
 		Config:     config,
 	}
 
+	fakeDNS := dns.NewSimulatedDNS()
+
 	boot_node := mock.CreateNode(t, 0, simulation, config)
+
+	boot_node.DNS = fakeDNS
 
 	boot_node.Logger = logger.NewPrintLogger("boot")
 
 	for i := 1; i < nrNodes; i++ {
 		node := mock.CreateNode(t, i, simulation, config)
+		node.DNS = fakeDNS
 		go node.Join(boot_node.Me)
 	}
 

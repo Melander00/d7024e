@@ -26,10 +26,14 @@ type KademliaConfig struct {
 	Timeout               time.Duration
 	Retries               int
 	BucketRefreshInterval time.Duration
+	ReplicationInterval   time.Duration
 }
 
 // defaultBucketRefreshInterval is used when a config leaves BucketRefreshInterval unset. set to half an hour to guarantee periodic refresh of buckets of an hour
 const defaultBucketRefreshInterval = time.Hour
+
+// defaultReplicationInterval is used when a config leaves ReplicationInterval unset.
+const defaultReplicationInterval = time.Hour
 
 func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 
@@ -40,6 +44,9 @@ func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 
 	if config.BucketRefreshInterval <= 0 {
 		config.BucketRefreshInterval = defaultBucketRefreshInterval
+	}
+	if config.ReplicationInterval <= 0 {
+		config.ReplicationInterval = defaultReplicationInterval
 	}
 
 	routing := contact.NewRoutingTable(rpc.Me, config.K)

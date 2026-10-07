@@ -5,6 +5,7 @@ import (
 	"d7024e/internal/kademlia/datastore"
 	"d7024e/internal/kademlia/rpc"
 	"d7024e/pkg/logger"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -203,6 +204,14 @@ func (kademlia *Kademlia) LookupContact(target *contact.Contact) []contact.Conta
 }
 
 func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
+	return kademlia.lookupData(hash, true)
+}
+
+func (kademlia *Kademlia) LookupDataAtKey(key string) ([]byte, error) {
+	return kademlia.lookupData(key, false)
+}
+
+func (kademlia *Kademlia) lookupData(hash string, contentAddressed bool) ([]byte, error) {
 	target, err := contact.ParseKademliaID(hash)
 
 	if err != nil {
@@ -234,8 +243,7 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 			}
 
 			if res.Value.Value != nil {
-				expectedKey := contact.NewKademliaIDFromData(res.Value.Value)
-				if expectedKey.Equals(target) {
+				if !contentAddressed || contact.NewKademliaIDFromData(res.Value.Value).Equals(target) {
 					kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_rpc_value %d %d\n", kademlia.Me.Address, reqI, len(res.Value.Value)))
 					return lookupResult{
 						contact: candidate,
@@ -261,7 +269,10 @@ func (kademlia *Kademlia) LookupData(hash string) ([]byte, error) {
 }
 
 func (kademlia *Kademlia) Store(data []byte) {
-	key := contact.NewKademliaIDFromData(data)
+	kademlia.StoreAtKey(contact.NewKademliaIDFromData(data), data)
+}
+
+func (kademlia *Kademlia) StoreAtKey(key *contact.KademliaID, data []byte) {
 	if err := kademlia.Datastore.Put(key, data); err != nil {
 		return
 	}
@@ -274,6 +285,10 @@ func (kademlia *Kademlia) Store(data []byte) {
 		}
 		_, _ = kademlia.Rpc.Store(candidate, key.String(), data)
 	}
+}
+
+func (kademlia *Kademlia) StoreLatestPointer(pointer LatestPointer) {
+	kademlia.StoreAtKey(pointer.Key(), pointer.Serialize())
 }
 
 func (kademlia *Kademlia) pingHandler(client contact.Contact) {
@@ -339,8 +354,29 @@ func (kademlia *Kademlia) storeHandler(client contact.Contact, key string, value
 	}
 
 	expected := contact.NewKademliaIDFromData(value)
-	if !target.Equals(expected) {
+	if target.Equals(expected) {
+		return kademlia.Datastore.Put(target, value) == nil
+	}
+
+	var pointer LatestPointer
+	if err := json.Unmarshal(value, &pointer); err != nil || pointer.Tag != latestPointerTag || !pointer.Key().Equals(target) {
 		return false
+	}
+	if pointer.Version == 0 || len(pointer.Signature) == 0 {
+		return false
+	}
+	if _, err := contact.ParseKademliaID(pointer.VersionRecordHash); err != nil {
+		return false
+	}
+
+	if currentData, exists := kademlia.Datastore.Get(target); exists {
+		var current LatestPointer
+		if err := json.Unmarshal(currentData, &current); err != nil || current.Tag != latestPointerTag {
+			return false
+		}
+		if pointer.Version <= current.Version {
+			return false
+		}
 	}
 
 	return kademlia.Datastore.Put(target, value) == nil

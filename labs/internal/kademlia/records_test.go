@@ -22,7 +22,7 @@ func TestVersionRecordSerializationAndStorage(t *testing.T) {
 	}
 
 	store := datastore.NewDataStore()
-	if err := record.Store(store); err != nil {
+	if err := record.StoreLocal(store); err != nil {
 		t.Fatal(err)
 	}
 	loaded, err := LoadVersionRecord(store, record.Hash())
@@ -42,7 +42,7 @@ func TestVersionRecordSerializationAndStorage(t *testing.T) {
 func TestLatestPointerUsesStableMutableKey(t *testing.T) {
 	pointer := NewLatestPointer("example.com", "package", 2, "record-hash", []byte{3})
 	store := datastore.NewDataStore()
-	if err := pointer.Store(store); err != nil {
+	if err := pointer.StoreLocal(store); err != nil {
 		t.Fatal(err)
 	}
 
@@ -60,6 +60,27 @@ func TestLatestPointerUsesStableMutableKey(t *testing.T) {
 	}
 	if pointer.Hash().Equals(newPointer.Hash()) {
 		t.Fatal("different pointer values unexpectedly have the same content hash")
+	}
+}
+
+func TestLatestPointerUpdateRejectsStaleValues(t *testing.T) {
+	node := MockKademlia(t, 1).Nodes[0]
+	current := NewLatestPointer("example.com", "package", 2, contact.NewRandomKademliaID().String(), []byte{1})
+	if !node.storeHandler(node.Me, current.Key().String(), current.Serialize()) {
+		t.Fatal("expected initial latest pointer to be accepted")
+	}
+
+	stale := NewLatestPointer("example.com", "package", 1, contact.NewRandomKademliaID().String(), []byte{2})
+	if node.storeHandler(node.Me, stale.Key().String(), stale.Serialize()) {
+		t.Fatal("expected stale latest pointer to be rejected")
+	}
+
+	loaded, err := LoadLatestPointer(node.Datastore, current.Key())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.Version != current.Version {
+		t.Fatalf("stale update overwrote current pointer: got version %d, want %d", loaded.Version, current.Version)
 	}
 }
 

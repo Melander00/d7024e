@@ -132,9 +132,15 @@ func (pointer LatestPointer) SigningHash() [32]byte {
 	return sha256.Sum256(pointer.SigningBytes())
 }
 
-// use kademlia Store implementation instead since the data is immutable?
-// TODO: Should be replicated over the DHT
-func (record VersionRecord) Store(ds *datastore.DataStore) error {
+// Store replicates the immutable version record using the normal content-
+// addressed DHT storage path.
+func (record VersionRecord) Store(kademlia *Kademlia) {
+	kademlia.Store(record.Serialize())
+}
+
+// StoreLocal stores the record in one node's local datastore without DHT
+// replication. It is useful when reading or constructing local state.
+func (record VersionRecord) StoreLocal(ds *datastore.DataStore) error {
 	return ds.Put(record.Hash(), record.Serialize())
 }
 
@@ -142,8 +148,11 @@ func (pointer LatestPointer) Key() *contact.KademliaID {
 	return contact.NewKademliaIDFromData([]byte(pointer.DomainName + ":" + pointer.PackageName + ":latest"))
 }
 
-// TODO: Should be replicated over the DHT
-func (pointer LatestPointer) Store(ds *datastore.DataStore) error {
+func (pointer LatestPointer) Store(kademlia *Kademlia) {
+	kademlia.StoreLatestPointer(pointer)
+}
+
+func (pointer LatestPointer) StoreLocal(ds *datastore.DataStore) error {
 	return ds.Put(pointer.Key(), pointer.Serialize())
 }
 

@@ -4,8 +4,10 @@ import (
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/datastore"
 	"d7024e/internal/kademlia/rpc"
+	d "d7024e/pkg/dns"
 	"d7024e/pkg/logger"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 )
@@ -18,6 +20,8 @@ type Kademlia struct {
 	Datastore *datastore.DataStore
 	Config    *KademliaConfig
 	Logger    logger.Logger
+	Signature Signature
+	DNS       d.DNS
 }
 
 type KademliaConfig struct {
@@ -51,6 +55,8 @@ func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 
 	routing := contact.NewRoutingTable(rpc.Me, config.K)
 
+	sign, _ := NewEd25519Sign()
+
 	kademlia := &Kademlia{
 		Rpc:       rpc,
 		ID:        id,
@@ -59,6 +65,8 @@ func NewKademliaNode(config KademliaConfig, rpc *rpc.RPC) *Kademlia {
 		Datastore: datastore.NewDataStore(),
 		Config:    &config,
 		Logger:    logger.NewEmptyLogger(),
+		Signature: sign,
+		DNS:       d.NewRealDNS(os.Getenv("DNS")),
 	}
 
 	rpc.SetPingHandler(kademlia.pingHandler)

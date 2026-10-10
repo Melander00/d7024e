@@ -7,6 +7,7 @@ import (
 	d "d7024e/pkg/dns"
 	"d7024e/pkg/logger"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -413,4 +414,79 @@ func (kademlia *Kademlia) Join(boot contact.Contact) {
 		kademlia.refreshBucket(bucketIndex)
 	}
 
+}
+
+func (kademlia *Kademlia) Publish(packageId string, data []byte, force bool, prev string) {
+	// if "force" == false:
+	// validate version
+
+	// if prev != "":
+	// set last version := prev
+	// else:
+	// find last version
+
+	// create new VersionRecord
+	// create new LatestPointer
+	// store VersionRecord
+	// store LatestPointer
+}
+
+func (kademlia *Kademlia) GetLatestVersion(domain string, pkg string) (*LatestPointer, error) {
+	id := contact.NewKademliaIDFromData([]byte(fmt.Sprintf("%s:%s:latest", domain, pkg)))
+	data, err := kademlia.LookupDataAtKey(id.String())
+	if err != nil {
+		return &LatestPointer{}, err
+	}
+
+	if len(data) == 0 {
+		return &LatestPointer{}, errors.New("package not found")
+	}
+
+	pointer := &LatestPointer{}
+	err = json.Unmarshal(data, pointer)
+	if err != nil {
+		return pointer, err
+	}
+
+	// verify
+	pk, err := kademlia.DNS.LookupPK(domain)
+	if err != nil {
+		return &LatestPointer{}, err
+	}
+
+	ok := kademlia.Signature.VerifyLatestRecord(*pointer, pk)
+	if !ok {
+		return &LatestPointer{}, errors.New("could not verify signature")
+	}
+
+	return pointer, nil
+}
+
+func (kademlia *Kademlia) GetVersionRecord(recordHash string) (*VersionRecord, error) {
+	data, err := kademlia.LookupData(recordHash)
+	if err != nil {
+		return &VersionRecord{}, err
+	}
+
+	if len(data) == 0 {
+		return &VersionRecord{}, errors.New("package not found")
+	}
+
+	rec := &VersionRecord{}
+	err = json.Unmarshal(data, rec)
+	if err != nil {
+		return rec, err
+	}
+
+	pk, err := kademlia.DNS.LookupPK(rec.DomainName)
+	if err != nil {
+		return &VersionRecord{}, err
+	}
+
+	ok := kademlia.Signature.VerifyVersionRecord(*rec, pk)
+	if !ok {
+		return &VersionRecord{}, errors.New("could not verify signature")
+	}
+
+	return rec, nil
 }

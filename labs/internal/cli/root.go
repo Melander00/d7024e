@@ -37,6 +37,8 @@ func StartCLI(node *kademlia.Kademlia, address string) {
 	cli.registerCommand(CLIPing(node))
 	cli.registerCommand(CLIPut(node))
 	cli.registerCommand(CLIShow(node))
+	cli.registerCommand(CLIPublish(node))
+	cli.registerCommand(CLIInstall(node))
 
 	cli.runCLI()
 }

@@ -109,7 +109,7 @@ func (cmd *showCmd) handle(args []string) {
 					return
 				}
 
-				fmt.Printf("\t%s => %s\n", rec.Version, truncateId(*rec.Hash()))
+				fmt.Printf("\t%d => %s\n", rec.Version, truncateId(*rec.Hash()))
 
 				if rec.PreviousVersionRecord != "" {
 					recHash = rec.PreviousVersionRecord

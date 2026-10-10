@@ -416,19 +416,29 @@ func (kademlia *Kademlia) Join(boot contact.Contact) {
 
 }
 
-func (kademlia *Kademlia) Publish(packageId string, data []byte, force bool, prev string) {
-	// if "force" == false:
-	// validate version
+func (kademlia *Kademlia) Publish(domain string, pkg string, version uint64, data []byte, force bool, prev string) {
+	if !force {
+		// validate version
+	}
 
-	// if prev != "":
-	// set last version := prev
-	// else:
-	// find last version
+	prevHash := ""
 
-	// create new VersionRecord
-	// create new LatestPointer
-	// store VersionRecord
-	// store LatestPointer
+	if prev != "" {
+		prevHash = prev
+	} else {
+		// find previous version
+	}
+
+	blobHash := contact.NewKademliaIDFromData(data)
+
+	rec := NewVersionRecord(domain, pkg, version, blobHash.String(), prevHash, []byte(nil))
+	kademlia.Signature.SignVersionRecord(rec)
+
+	point := NewLatestPointer(domain, pkg, version, rec.Hash().String(), []byte(nil))
+	kademlia.Signature.SignLatestRecord(point)
+
+	kademlia.Store(rec.Serialize())
+	kademlia.StoreAtKey(point.Key(), point.Serialize())
 }
 
 func (kademlia *Kademlia) GetLatestVersion(domain string, pkg string) (*LatestPointer, error) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -52,7 +53,19 @@ func (cmd *publishCmd) handle(args []string) {
 		}
 	}
 
-	packageId := subargs[0]
+	splits := strings.Split(subargs[0], ":")
+	if len(splits) != 3 {
+		fmt.Println("packageid needs to follow DOMAIN:PACKAGE:VERSION")
+		return
+	}
+
+	domain := splits[0]
+	pkg := splits[1]
+	version, err := strconv.ParseUint(splits[2], 10, 64)
+	if err != nil {
+		fmt.Println("version needs to be a uint64")
+	}
+
 	filename := subargs[1]
 
 	path := filepath.Join(filename)
@@ -66,7 +79,7 @@ func (cmd *publishCmd) handle(args []string) {
 	fmt.Printf("  publishing %s with size %s\n", filename, formatBytes(data))
 
 	// publish
-	cmd.node.Publish(packageId, data, force, prev)
+	cmd.node.Publish(domain, pkg, version, data, force, prev)
 }
 
 func (cmd *publishCmd) getName() string {

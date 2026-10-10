@@ -92,7 +92,7 @@ func (cmd *showCmd) handle(args []string) {
 
 			latest, err := cmd.node.GetLatestVersion(domain, pkg)
 			if err != nil {
-				fmt.Printf("error %s\n", err.Error())
+				fmt.Printf("%s\n", err.Error())
 				return
 			}
 

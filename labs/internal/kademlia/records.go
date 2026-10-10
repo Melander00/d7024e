@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"d7024e/internal/kademlia/contact"
 	"d7024e/internal/kademlia/datastore"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -183,4 +184,10 @@ func LoadLatestPointer(ds *datastore.DataStore, key *contact.KademliaID) (Latest
 func (record VersionRecord) HashString() (string, error) {
 	hash := record.Hash()
 	return hex.EncodeToString(hash[:]), nil
+}
+
+func (p LatestPointer) String() string {
+
+	return fmt.Sprintf("latest-pointer %s:%s:%d \n\tkey=%s\n\tsign=%s", p.DomainName, p.PackageName, p.Version, p.Key(), base64.StdEncoding.EncodeToString(p.Signature))
+
 }

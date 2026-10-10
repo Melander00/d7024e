@@ -276,15 +276,17 @@ func (rpc *RPC) FindValue(
 	}
 
 	// Verify that the received value actually matches the requested key.
-	requestedID, err := contact.ParseKademliaID(id)
-	if err != nil {
-		return nil, err
-	}
 
-	receivedID := contact.NewKademliaIDFromData(dataRes.Value)
-	if !requestedID.Equals(receivedID) {
-		return nil, errors.New("received value does not match requested key")
-	}
+	// This should be done in Kademlia and not RPC. Otherwise LatestPointer will always be no-bytes
+	// requestedID, err := contact.ParseKademliaID(id)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// receivedID := contact.NewKademliaIDFromData(dataRes.Value)
+	// if !requestedID.Equals(receivedID) {
+	// 	return nil, errors.New("received value does not match requested key")
+	// }
 
 	// Preserve current API for Kademlia.
 	res.Value.Value = dataRes.Value

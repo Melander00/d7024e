@@ -243,6 +243,8 @@ func (kademlia *Kademlia) lookupData(hash string, contentAddressed bool) ([]byte
 			kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_rpc %d %s\n", kademlia.Me.Address, reqI, candidate.ID.String()))
 			res, err := kademlia.Rpc.FindValue(candidate, target.String())
 
+			// fmt.Printf("%d 1 %d \n", reqI, len(res.Value.Value))
+
 			if err != nil {
 				kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_rpc_error %d %s\n", kademlia.Me.Address, reqI, err.Error()))
 				return lookupResult{
@@ -251,8 +253,14 @@ func (kademlia *Kademlia) lookupData(hash string, contentAddressed bool) ([]byte
 				}
 			}
 
+			// fmt.Printf("%d 2 %d \n", reqI, len(res.Value.Value))
+
 			if res.Value.Value != nil {
+				// fmt.Printf("%d 2.1 %d \n", reqI, len(res.Value.Value))
+
 				if !contentAddressed || contact.NewKademliaIDFromData(res.Value.Value).Equals(target) {
+					// fmt.Printf("%d 2.1.1 %d \n", reqI, len(res.Value.Value))
+
 					kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_rpc_value %d %d\n", kademlia.Me.Address, reqI, len(res.Value.Value)))
 					return lookupResult{
 						contact: candidate,
@@ -261,11 +269,15 @@ func (kademlia *Kademlia) lookupData(hash string, contentAddressed bool) ([]byte
 					}
 				}
 
+				// fmt.Printf("%d 2.2 %d \n", reqI, len(res.Value.Value))
+
 				return lookupResult{
 					contact: candidate,
 					err:     fmt.Errorf("kademlia: value for %s does not hash to the requested key", target.String()),
 				}
 			}
+
+			// fmt.Printf("%d 3 %d \n", reqI, len(res.Value.Value))
 
 			return lookupResult{
 				contact:  candidate,
@@ -282,7 +294,11 @@ func (kademlia *Kademlia) Store(data []byte) {
 }
 
 func (kademlia *Kademlia) StoreAtKey(key *contact.KademliaID, data []byte) {
+
+	// fmt.Printf("Store len %d: %s\n", len(data), key.String())
+
 	if err := kademlia.Datastore.Put(key, data); err != nil {
+		fmt.Printf("STORE ERROR %s\n", err.Error())
 		return
 	}
 
@@ -418,7 +434,7 @@ func (kademlia *Kademlia) Join(boot contact.Contact) {
 
 func (kademlia *Kademlia) Publish(domain string, pkg string, version uint64, data []byte, force bool, prev string) {
 	if !force {
-		// validate version
+		// TODO validate version
 	}
 
 	prevHash := ""
@@ -426,30 +442,36 @@ func (kademlia *Kademlia) Publish(domain string, pkg string, version uint64, dat
 	if prev != "" {
 		prevHash = prev
 	} else {
-		// find previous version
+		// TODO find previous version
 	}
+
+	kademlia.Store(data)
 
 	blobHash := contact.NewKademliaIDFromData(data)
 
 	rec := NewVersionRecord(domain, pkg, version, blobHash.String(), prevHash, []byte(nil))
-	kademlia.Signature.SignVersionRecord(rec)
+	rec = kademlia.Signature.SignVersionRecord(rec)
 
 	point := NewLatestPointer(domain, pkg, version, rec.Hash().String(), []byte(nil))
-	kademlia.Signature.SignLatestRecord(point)
+	point = kademlia.Signature.SignLatestRecord(point)
 
 	kademlia.Store(rec.Serialize())
 	kademlia.StoreAtKey(point.Key(), point.Serialize())
+	// fmt.Printf("stored %s\n", point.Key().String())
 }
 
 func (kademlia *Kademlia) GetLatestVersion(domain string, pkg string) (*LatestPointer, error) {
 	id := contact.NewKademliaIDFromData([]byte(fmt.Sprintf("%s:%s:latest", domain, pkg)))
+	// fmt.Printf("get-latest-version: %s\n", id.String())
+
 	data, err := kademlia.LookupDataAtKey(id.String())
 	if err != nil {
 		return &LatestPointer{}, err
 	}
 
 	if len(data) == 0 {
-		return &LatestPointer{}, errors.New("package not found")
+		// fmt.Printf("data is zero %s\n", data)
+		return &LatestPointer{}, fmt.Errorf("package not found %s\n", id.String())
 	}
 
 	pointer := &LatestPointer{}
@@ -463,6 +485,8 @@ func (kademlia *Kademlia) GetLatestVersion(domain string, pkg string) (*LatestPo
 	if err != nil {
 		return &LatestPointer{}, err
 	}
+
+	// fmt.Printf("data %s\n", pointer)
 
 	ok := kademlia.Signature.VerifyLatestRecord(*pointer, pk)
 	if !ok {

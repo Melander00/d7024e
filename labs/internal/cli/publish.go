@@ -22,17 +22,20 @@ func CLIPublish(node *kademlia.Kademlia) *publishCmd {
 }
 
 func (cmd *publishCmd) handle(args []string) {
-	flags := make([]string, 5)
+	flags := make([]string, 0)
 
-	subargs := make([]string, 5)
+	subargs := make([]string, 0)
 
-	for _, a := range args {
-		if strings.HasPrefix(a, "--") {
-			flags = append(flags, a)
-		} else {
-			subargs = append(subargs, a)
+	for _, a := range args[1:] {
+		b := strings.TrimSpace(a)
+		if strings.HasPrefix(b, "--") {
+			flags = append(flags, b)
+		} else if b != "" {
+			subargs = append(subargs, b)
 		}
 	}
+
+	// fmt.Printf("%d %s", len(subargs), subargs)
 
 	if len(subargs) != 2 {
 		fmt.Println(cmd.getHelp())
@@ -76,7 +79,7 @@ func (cmd *publishCmd) handle(args []string) {
 		return
 	}
 
-	fmt.Printf("  publishing %s with size %s\n", filename, formatBytes(data))
+	fmt.Printf("  publishing %s:%s:%d with size %s\n", domain, pkg, version, formatBytes(data))
 
 	// publish
 	cmd.node.Publish(domain, pkg, version, data, force, prev)

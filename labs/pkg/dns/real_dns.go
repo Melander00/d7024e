@@ -25,7 +25,7 @@ func NewRealDNS(host string) *RealDNS {
 }
 
 func (dns *RealDNS) LookupPK(domain string) (c.PublicKey, error) {
-	res, err := http.Get("http://" + dns.dnsHost + "/pk/" + domain)
+	res, err := http.Get(dns.dnsHost + "/pk/" + domain)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func (dns *RealDNS) ClaimDomain(domain string, pk c.PublicKey) error {
 	}
 
 	res, err := http.Post(
-		"http://"+dns.dnsHost+"/claim",
+		dns.dnsHost+"/claim",
 		"application/json",
 		bytes.NewBuffer(body),
 	)

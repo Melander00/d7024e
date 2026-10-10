@@ -28,7 +28,7 @@ services:
       dns:
         condition: service_healthy
     environment:
-      DNS: "dns:3000"
+      DNS: "http://dns:3000"
       DOMAIN: "boot.se"
     networks:
       - kademlia
@@ -40,7 +40,7 @@ services:
     stdin_open: true
     tty: true
     environment:
-      DNS: "dns:3000"
+      DNS: "http://dns:3000"
       BOOTSTRAP: "bootstrap:8080"
     command: >
       sh -c '

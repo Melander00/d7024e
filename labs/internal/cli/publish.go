@@ -22,6 +22,7 @@ func CLIPublish(node *kademlia.Kademlia) *publishCmd {
 }
 
 func (cmd *publishCmd) handle(args []string) {
+
 	flags := make([]string, 0)
 
 	subargs := make([]string, 0)
@@ -69,6 +70,10 @@ func (cmd *publishCmd) handle(args []string) {
 		fmt.Println("version needs to be a uint64")
 	}
 
+	if domain == "" || pkg == "" {
+		fmt.Println("invalid domain and/or package")
+	}
+
 	filename := subargs[1]
 
 	path := filepath.Join(filename)
@@ -79,10 +84,17 @@ func (cmd *publishCmd) handle(args []string) {
 		return
 	}
 
-	fmt.Printf("  publishing %s:%s:%d with size %s\n", domain, pkg, version, formatBytes(data))
-
 	// publish
-	cmd.node.Publish(domain, pkg, version, data, force, prev)
+	if cmd.node == nil {
+		fmt.Println("node is not initialized")
+		return
+	}
+	err = cmd.node.Publish(domain, pkg, version, data, force, prev)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("\tPublished %s:%s:%d with size %s\n", domain, pkg, version, formatBytes(data))
 }
 
 func (cmd *publishCmd) getName() string {

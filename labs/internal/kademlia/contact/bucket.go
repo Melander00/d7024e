@@ -12,7 +12,7 @@ type bucket struct {
 	list       *list.List
 	size       int
 	lastLookup time.Time
-	mu         sync.RWMutex
+	Mu         sync.RWMutex
 }
 
 // newBucket returns a new instance of a bucket
@@ -27,8 +27,8 @@ func newBucket(size int) *bucket {
 // AddContact adds the Contact to the front of the bucket
 // or moves it to the front of the bucket if it already existed
 func (bucket *bucket) AddContact(contact Contact) {
-	bucket.mu.Lock()
-	defer bucket.mu.Unlock()
+	bucket.Mu.Lock()
+	defer bucket.Mu.Unlock()
 
 	var element *list.Element
 	for e := bucket.list.Front(); e != nil; e = e.Next() {
@@ -51,8 +51,8 @@ func (bucket *bucket) AddContact(contact Contact) {
 
 // Remove contact from this bucket.
 func (bucket *bucket) RemoveContact(contact Contact) {
-	bucket.mu.Lock()
-	defer bucket.mu.Unlock()
+	bucket.Mu.Lock()
+	defer bucket.Mu.Unlock()
 
 	var element *list.Element
 	for e := bucket.list.Front(); e != nil; e = e.Next() {
@@ -71,8 +71,8 @@ func (bucket *bucket) RemoveContact(contact Contact) {
 // GetContactAndCalcDistance returns an array of Contacts where
 // the distance has already been calculated
 func (bucket *bucket) GetContactAndCalcDistance(target *KademliaID) []Contact {
-	bucket.mu.Lock()
-	defer bucket.mu.Unlock()
+	bucket.Mu.Lock()
+	defer bucket.Mu.Unlock()
 
 	var contacts []Contact
 
@@ -91,8 +91,8 @@ func (bucket *bucket) Len() int {
 }
 
 func (bucket *bucket) GetContacts() []Contact {
-	bucket.mu.RLock()
-	defer bucket.mu.RUnlock()
+	bucket.Mu.RLock()
+	defer bucket.Mu.RUnlock()
 
 	var contacts []Contact
 
@@ -106,16 +106,16 @@ func (bucket *bucket) GetContacts() []Contact {
 
 // MarkLookup updates the last lookup time for the bucket to the current time.
 func (bucket *bucket) MarkLookup() {
-	bucket.mu.Lock()
-	defer bucket.mu.Unlock()
+	bucket.Mu.Lock()
+	defer bucket.Mu.Unlock()
 
 	bucket.lastLookup = time.Now()
 }
 
 // NeedsRefresh checks if the bucket needs to be refreshed based on the given interval.
 func (bucket *bucket) NeedsRefresh(interval time.Duration) bool {
-	bucket.mu.RLock()
-	defer bucket.mu.RUnlock()
+	bucket.Mu.RLock()
+	defer bucket.Mu.RUnlock()
 
 	if bucket.lastLookup.IsZero() {
 		return true

@@ -34,6 +34,7 @@ services:
       - kademlia
     volumes:
       - ./data:/app/data
+      - ./downloads:/app/downloads
 
   node:
     build: .
@@ -54,6 +55,7 @@ services:
       - kademlia
     volumes:
       - ./data:/app/data
+      - ./downloads:/app/downloads
     # deploy:
     #   replicas: 49
 

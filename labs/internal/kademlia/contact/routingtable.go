@@ -12,7 +12,7 @@ type RoutingTable struct {
 	buckets    [IDLength * 8]*bucket
 	bucketSize int
 
-	mu sync.RWMutex
+	Mu sync.RWMutex
 }
 
 // NewRoutingTable returns a new instance of a RoutingTable
@@ -29,8 +29,8 @@ func NewRoutingTable(me Contact, bucketSize int) *RoutingTable {
 
 // AddContact add a new contact to the correct Bucket
 func (routingTable *RoutingTable) AddContact(contact Contact) {
-	routingTable.mu.Lock()
-	defer routingTable.mu.Unlock()
+	routingTable.Mu.Lock()
+	defer routingTable.Mu.Unlock()
 	if contact.ID.Equals(routingTable.me.ID) {
 		return
 	}
@@ -41,8 +41,8 @@ func (routingTable *RoutingTable) AddContact(contact Contact) {
 
 // Remove a contact from the corresponding Bucket.
 func (routingTable *RoutingTable) RemoveContact(contact Contact) {
-	routingTable.mu.Lock()
-	defer routingTable.mu.Unlock()
+	routingTable.Mu.Lock()
+	defer routingTable.Mu.Unlock()
 
 	bucketIndex := routingTable.getBucketIndex(contact.ID)
 	bucket := routingTable.buckets[bucketIndex]
@@ -51,8 +51,8 @@ func (routingTable *RoutingTable) RemoveContact(contact Contact) {
 
 // FindClosestContacts finds the count closest Contacts to the target in the RoutingTable
 func (routingTable *RoutingTable) FindClosestContacts(target *KademliaID, count int) []Contact {
-	routingTable.mu.RLock()
-	defer routingTable.mu.RUnlock()
+	routingTable.Mu.RLock()
+	defer routingTable.Mu.RUnlock()
 
 	var candidates ContactCandidates
 	bucketIndex := routingTable.getBucketIndex(target)

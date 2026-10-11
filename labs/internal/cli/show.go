@@ -4,6 +4,7 @@ import (
 	"d7024e/internal/kademlia"
 	"d7024e/internal/kademlia/contact"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -39,33 +40,34 @@ func (cmd *showCmd) handle(args []string) {
 	sub := args[1]
 
 	if sub == "rt" {
-		buckets := cmd.node.Routing.GetBuckets()
+		cmd.node.PrintRT()
+		// buckets := cmd.node.Routing.GetBuckets()
 
-		if len(buckets) == 0 {
-			fmt.Println("Routing table is empty.")
-			return
-		}
+		// if len(buckets) == 0 {
+		// 	fmt.Println("Routing table is empty.")
+		// 	return
+		// }
 
-		fmt.Println("Routing Table:")
+		// fmt.Println("Routing Table:")
 
-		for i, bucket := range buckets {
-			if bucket.Len() == 0 {
-				continue
-			}
+		// for i, bucket := range buckets {
+		// 	if bucket.Len() == 0 {
+		// 		continue
+		// 	}
 
-			contacts := bucket.GetContacts()
+		// 	contacts := bucket.GetContacts()
 
-			fmt.Printf("  bucket %d:\n", i)
-			for _, c := range contacts {
-				fmt.Printf("    %s: %s\n", c.Address, truncateId(*c.ID))
-			}
-		}
+		// 	fmt.Printf("  bucket %d:\n", i)
+		// 	for _, c := range contacts {
+		// 		fmt.Printf("    %s: %s\n", c.Address, truncateId(*c.ID))
+		// 	}
+		// }
 
 	} else if sub == "ds" {
 		keys := cmd.node.Datastore.Keys()
 		fmt.Println("Keys stored in local data store")
 		for _, k := range keys {
-			fmt.Printf("  %s\n", truncateId(*k))
+			cmd.printDSKey(k)
 		}
 
 	} else if sub == "dns" {
@@ -111,7 +113,7 @@ func (cmd *showCmd) handle(args []string) {
 
 				fmt.Printf("\t%d => %s\n", rec.Version, truncateId(*rec.Hash()))
 
-				if rec.PreviousVersionRecord != "" {
+				if rec.PreviousVersionRecord != "" && rec.PreviousVersionRecord != zeroHash() {
 					recHash = rec.PreviousVersionRecord
 				} else {
 					cont = false
@@ -133,10 +135,39 @@ func (cmd *showCmd) getHelp() string {
 	return `show <rt|ds|dns|DOMAIN:PACKAGE> [dns->domain] - prints either routing table or keys in data store`
 }
 
+func (cmd *showCmd) printDSKey(k *contact.KademliaID) {
+
+	// We guarantee OK is always true
+	data, _ := cmd.node.Datastore.Get(k)
+
+	pointer := &kademlia.LatestPointer{}
+	err := json.Unmarshal(data, pointer)
+	if err == nil && pointer.Tag == "latest-pointer" {
+
+		fmt.Printf("  %s => %s\n", truncateId(*k), pointer)
+		return
+	}
+
+	record := &kademlia.VersionRecord{}
+	err = json.Unmarshal(data, record)
+	if err == nil && record.Tag == "version-record" {
+
+		fmt.Printf("  %s => %s\n", truncateId(*k), record)
+		return
+	}
+
+	// Just data
+	fmt.Printf("  %s => blob\n", truncateId(*k))
+}
+
 func truncateId(id contact.KademliaID) string {
 	length := 8
 
 	str := id.String()
 
 	return str[0:length] + "..." + str[len(str)-length:]
+}
+
+func zeroHash() string {
+	return "0000000000000000000000000000000000000000000000000000000000000000"
 }

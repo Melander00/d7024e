@@ -191,3 +191,9 @@ func (p LatestPointer) String() string {
 	return fmt.Sprintf("latest-pointer %s:%s:%d \n\tkey=%s\n\tsign=%s", p.DomainName, p.PackageName, p.Version, p.Key(), base64.StdEncoding.EncodeToString(p.Signature))
 
 }
+
+func (p VersionRecord) String() string {
+
+	return fmt.Sprintf("version-record %s:%s:%d \n\tkey=%s\n\tsign=%s", p.DomainName, p.PackageName, p.Version, p.Hash(), base64.StdEncoding.EncodeToString(p.Signature))
+
+}

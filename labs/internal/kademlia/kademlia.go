@@ -227,6 +227,10 @@ func (kademlia *Kademlia) lookupData(hash string, contentAddressed bool) ([]byte
 		return nil, err
 	}
 
+	if data, ok := kademlia.Datastore.Get(target); ok {
+		return data, nil
+	}
+
 	kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_start %s\n", kademlia.Me.Address, hash))
 	defer kademlia.Logger.Log(fmt.Sprintf("%s lookup_data_end\n", kademlia.Me.Address))
 
@@ -394,17 +398,45 @@ func (kademlia *Kademlia) storeHandler(client contact.Contact, key string, value
 		return false
 	}
 
-	if currentData, exists := kademlia.Datastore.Get(target); exists {
-		var current LatestPointer
-		if err := json.Unmarshal(currentData, &current); err != nil || current.Tag != latestPointerTag {
+	pk, err := kademlia.DNS.LookupPK(pointer.DomainName)
+	if err != nil {
+		return false
+	}
+
+	if !kademlia.Signature.VerifyLatestRecord(pointer, pk) {
+		return false
+	}
+
+	// VALIDATE VERSION
+
+	var current *LatestPointer
+
+	if existingBytes, ok := kademlia.Datastore.Get(target); ok {
+		var existing LatestPointer
+		if err := json.Unmarshal(existingBytes, &existing); err != nil {
 			return false
 		}
-		if pointer.Version <= current.Version {
-			return false
-		}
+		current = &existing
+	}
+
+	if err := kademlia.validatePointerUpdate(pointer, current); err != nil {
+		fmt.Println(err)
+		return false
 	}
 
 	return kademlia.Datastore.Put(target, value) == nil
+
+	// if currentData, exists := kademlia.Datastore.Get(target); exists {
+	// 	var current LatestPointer
+	// 	if err := json.Unmarshal(currentData, &current); err != nil || current.Tag != latestPointerTag {
+	// 		return false
+	// 	}
+	// 	if pointer.Version <= current.Version {
+	// 		return false
+	// 	}
+	// }
+
+	// return kademlia.Datastore.Put(target, value) == nil
 }
 
 func (kademlia *Kademlia) Join(boot contact.Contact) {
@@ -432,17 +464,32 @@ func (kademlia *Kademlia) Join(boot contact.Contact) {
 
 }
 
-func (kademlia *Kademlia) Publish(domain string, pkg string, version uint64, data []byte, force bool, prev string) {
-	if !force {
-		// TODO validate version
-	}
-
+func (kademlia *Kademlia) Publish(domain string, pkg string, version uint64, data []byte, force bool, prev string) error {
 	prevHash := ""
 
-	if prev != "" {
-		prevHash = prev
+	pk, err := kademlia.DNS.LookupPK(domain)
+	if !pk.Equal(kademlia.Signature.GetPublicKey()) {
+		return fmt.Errorf("you dont own that domain")
+	}
+
+	p, err := kademlia.GetLatestVersion(domain, pkg)
+	if err != nil {
+		// Package doesnt exist so we skip validation
+		force = true
+		prevHash = zeroHash()
 	} else {
-		// TODO find previous version
+		prevHash = p.VersionRecordHash
+	}
+
+	if !force {
+		// TODO validate version
+		if p.Version+1 != version {
+			return fmt.Errorf("Invalid version")
+		}
+	}
+
+	if prev != "" && len(prev) == 64 && prev == p.VersionRecordHash {
+		prevHash = prev
 	}
 
 	kademlia.Store(data)
@@ -458,6 +505,8 @@ func (kademlia *Kademlia) Publish(domain string, pkg string, version uint64, dat
 	kademlia.Store(rec.Serialize())
 	kademlia.StoreAtKey(point.Key(), point.Serialize())
 	// fmt.Printf("stored %s\n", point.Key().String())
+
+	return nil
 }
 
 func (kademlia *Kademlia) GetLatestVersion(domain string, pkg string) (*LatestPointer, error) {
@@ -471,7 +520,7 @@ func (kademlia *Kademlia) GetLatestVersion(domain string, pkg string) (*LatestPo
 
 	if len(data) == 0 {
 		// fmt.Printf("data is zero %s\n", data)
-		return &LatestPointer{}, fmt.Errorf("package not found %s\n", id.String())
+		return &LatestPointer{}, fmt.Errorf("package not found")
 	}
 
 	pointer := &LatestPointer{}
@@ -523,4 +572,251 @@ func (kademlia *Kademlia) GetVersionRecord(recordHash string) (*VersionRecord, e
 	}
 
 	return rec, nil
+}
+
+func (k *Kademlia) validatePointerUpdate(
+	pointer LatestPointer,
+	current *LatestPointer,
+) error {
+	// 1. Validate basic pointer fields.
+	if pointer.Tag != latestPointerTag {
+		return errors.New("invalid latest pointer tag")
+	}
+
+	if pointer.Version == 0 {
+		return errors.New("version must be greater than zero")
+	}
+
+	expectedKey := contact.NewKademliaIDFromData(
+		[]byte(fmt.Sprintf(
+			"%s:%s:latest",
+			pointer.DomainName,
+			pointer.PackageName,
+		)),
+	)
+
+	if !pointer.Key().Equals(expectedKey) {
+		return errors.New("latest pointer key mismatch")
+	}
+
+	if _, err := contact.ParseKademliaID(pointer.VersionRecordHash); err != nil {
+		return fmt.Errorf("invalid version record hash: %w", err)
+	}
+
+	// 2. Verify the pointer's signature against the domain owner's key.
+	pk, err := k.DNS.LookupPK(pointer.DomainName)
+	if err != nil {
+		return fmt.Errorf("DNS lookup failed: %w", err)
+	}
+
+	if !k.Signature.VerifyLatestRecord(pointer, pk) {
+		return errors.New("invalid latest pointer signature")
+	}
+
+	// 3. Validate the referenced record and its complete history.
+	head, err := k.validateVersionChain(
+		pointer.VersionRecordHash,
+		pointer.DomainName,
+		pointer.PackageName,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid version history: %w", err)
+	}
+
+	if head.Version != pointer.Version {
+		return errors.New("pointer version does not match version record")
+	}
+
+	// 4. With no local pointer, the valid chain back to genesis is enough
+	// to validate the history we have received.
+	if current == nil {
+		return nil
+	}
+
+	// The existing pointer must belong to the same package.
+	if current.DomainName != pointer.DomainName ||
+		current.PackageName != pointer.PackageName {
+		return errors.New("current pointer identity mismatch")
+	}
+
+	// 5. An exact repeat is an idempotent update, not a fork.
+	if current.VersionRecordHash == pointer.VersionRecordHash &&
+		current.Version == pointer.Version {
+		return nil
+	}
+
+	// 6. Reject rollback and conflicting updates at the same version.
+	if pointer.Version <= current.Version {
+		return errors.New("rollback or conflicting version rejected")
+	}
+
+	// 7. The proposed chain must include our current head.
+	// This allows catch-up when we have missed intermediate updates.
+	if err := k.extendsCurrentHead(
+		pointer.VersionRecordHash,
+		current.VersionRecordHash,
+		pointer.DomainName,
+		pointer.PackageName,
+	); err != nil {
+		return fmt.Errorf("proposed update does not extend current history: %w", err)
+	}
+
+	return nil
+}
+
+func (k *Kademlia) extendsCurrentHead(
+	proposedHash string,
+	currentHash string,
+	domain string,
+	pkg string,
+) error {
+	hash := proposedHash
+
+	for hash != zeroHash() {
+		if hash == currentHash {
+			return nil
+		}
+
+		record, err := k.GetVersionRecord(hash)
+		if err != nil {
+			return err
+		}
+
+		if record.DomainName != domain ||
+			record.PackageName != pkg {
+			return errors.New("version chain identity mismatch")
+		}
+
+		hash = record.PreviousVersionRecord
+	}
+
+	return errors.New("proposed version does not extend current history")
+}
+
+func zeroHash() string {
+	return "0000000000000000000000000000000000000000000000000000000000000000"
+}
+
+func (k *Kademlia) validateVersionChain(
+	headHash string,
+	domain string,
+	pkg string,
+) (*VersionRecord, error) {
+	if _, err := contact.ParseKademliaID(headHash); err != nil {
+		return nil, fmt.Errorf("invalid head record hash: %w", err)
+	}
+
+	hash := headHash
+	seen := make(map[string]bool)
+
+	var head *VersionRecord
+	var newer *VersionRecord
+	var oldest *VersionRecord
+
+	for hash != zeroHash() {
+		// Reject cycles so malformed history cannot loop forever.
+		if seen[hash] {
+			return nil, errors.New("cycle detected in version history")
+		}
+		seen[hash] = true
+
+		// LookupData verifies that the returned bytes hash to this key.
+		// GetVersionRecord also verifies the record's signature.
+		rec, err := k.GetVersionRecord(hash)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"could not retrieve version record %s: %w",
+				hash, err,
+			)
+		}
+
+		// Verify the record belongs to the expected package.
+		if rec.DomainName != domain || rec.PackageName != pkg {
+			return nil, errors.New("version record package identity mismatch")
+		}
+
+		// Ensure the decoded record's canonical hash matches the key.
+		if rec.Hash().String() != hash {
+			return nil, errors.New("version record hash mismatch")
+		}
+
+		if rec.Version == 0 {
+			return nil, errors.New("version number must be greater than zero")
+		}
+
+		if head == nil {
+			head = rec
+		}
+
+		// We're walking newest to oldest. Each predecessor must have
+		// a strictly smaller version number than the record after it.
+		if newer != nil && rec.Version >= newer.Version {
+			return nil, errors.New(
+				"version numbers must strictly increase along the chain",
+			)
+		}
+
+		previous := rec.PreviousVersionRecord
+
+		// Every non-genesis predecessor must be a valid Kademlia ID.
+		if previous != zeroHash() {
+			if _, err := contact.ParseKademliaID(previous); err != nil {
+				return nil, fmt.Errorf(
+					"invalid previous-record hash %q: %w",
+					previous, err,
+				)
+			}
+		}
+
+		oldest = rec
+		newer = rec
+		hash = previous
+	}
+
+	if head == nil || oldest == nil {
+		return nil, errors.New("version history is empty")
+	}
+
+	// The last record visited must be the genesis record.
+	if oldest.PreviousVersionRecord != zeroHash() {
+		return nil, errors.New("version history does not terminate at genesis")
+	}
+
+	return head, nil
+}
+
+func (k *Kademlia) PrintRT() {
+	k.Routing.Mu.Lock()
+	defer k.Routing.Mu.Unlock()
+
+	buckets := k.Routing.GetBuckets()
+
+	if len(buckets) == 0 {
+		fmt.Println("Routing table is empty.")
+		return
+	}
+
+	fmt.Println("Routing Table:")
+
+	for i, bucket := range buckets {
+
+		if bucket.Len() == 0 {
+			continue
+		}
+
+		contacts := bucket.GetContacts()
+
+		fmt.Printf("  bucket %d:\n", i)
+		for _, c := range contacts {
+			fmt.Printf("    %s: %s\n", c.Address, truncateId(*c.ID))
+		}
+	}
+}
+
+func truncateId(id contact.KademliaID) string {
+	length := 8
+
+	str := id.String()
+
+	return str[0:length] + "..." + str[len(str)-length:]
 }

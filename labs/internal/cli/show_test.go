@@ -166,3 +166,101 @@ func createTestNode(t *T) *kademlia.Kademlia {
 
 	return mock.CreateNode(t, 0, simulation, config)
 }
+
+func TestShowCmdGetName(t *T) {
+	node := createTestNode(t)
+	cmd := CLIShow(node)
+
+	if got := cmd.getName(); got != "show" {
+		t.Fatalf("expected command name %q, got %q", "show", got)
+	}
+}
+
+func TestShowCmdHandleUnknownSubcommand(t *T) {
+	node := createTestNode(t)
+	cmd := CLIShow(node)
+
+	output := captureOutput(t, func() {
+		cmd.handle([]string{"show", "unknown"})
+	})
+
+	expected := cmd.getHelp()
+	if !strings.Contains(output, expected) {
+		t.Fatalf("expected help output for unknown subcommand, got:\n%s", output)
+	}
+}
+
+func TestShowCmdHandleDNSMissingDomain(t *T) {
+	node := createTestNode(t)
+	cmd := CLIShow(node)
+
+	output := captureOutput(t, func() {
+		cmd.handle([]string{"show", "dns"})
+	})
+
+	if !strings.Contains(output, cmd.getHelp()) {
+		t.Fatalf("expected help output when DNS domain is missing, got:\n%s", output)
+	}
+}
+
+func TestShowCmdHandleDNSLookupError(t *T) {
+	node := createTestNode(t)
+	cmd := CLIShow(node)
+
+	output := captureOutput(t, func() {
+		cmd.handle([]string{"show", "dns", "missing.example"})
+	})
+
+	if strings.TrimSpace(output) == "" {
+		t.Fatal("expected an error message for an unknown DNS domain")
+	}
+}
+
+func TestShowCmdHandleDataStoreEmpty(t *T) {
+	node := createTestNode(t)
+	cmd := CLIShow(node)
+
+	output := captureOutput(t, func() {
+		cmd.handle([]string{"show", "ds"})
+	})
+
+	if !strings.Contains(output, "Keys stored in local data store") {
+		t.Fatalf("expected datastore header, got:\n%s", output)
+	}
+
+	if strings.Contains(output, " => ") {
+		t.Fatalf("expected no datastore entries, got:\n%s", output)
+	}
+}
+
+func TestShowCmdHandleDataStoreBlob(t *T) {
+	node := createTestNode(t)
+
+	data := []byte("plain blob")
+	node.Store(data)
+
+	id := contact.NewKademliaIDFromData(data)
+	cmd := CLIShow(node)
+
+	output := captureOutput(t, func() {
+		cmd.handle([]string{"show", "ds"})
+	})
+
+	expected := truncateId(*id) + " => blob"
+	if !strings.Contains(output, expected) {
+		t.Fatalf("expected datastore output to contain %q, got:\n%s", expected, output)
+	}
+}
+
+func TestShowCmdHandleExtraArguments(t *T) {
+	node := createTestNode(t)
+	cmd := CLIShow(node)
+
+	output := captureOutput(t, func() {
+		cmd.handle([]string{"show", "unknown", "extra"})
+	})
+
+	if !strings.Contains(output, cmd.getHelp()) {
+		t.Fatalf("expected help output for unknown subcommand with extra arguments, got:\n%s", output)
+	}
+}
